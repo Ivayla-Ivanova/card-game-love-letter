@@ -20,6 +20,7 @@ public class Client {
 
         try (Socket clientSocket = new Socket(this.hostname,this.port)){
             System.out.println("Connected to server successfully!");
+            System.out.println("Enter a name: ");
             ReceivingThread receivingThread = new ReceivingThread(clientSocket);
             receivingThread.start();
 
@@ -37,5 +38,7 @@ public class Client {
             throw new RuntimeException(e);
         }
     }
+
+
 }
 

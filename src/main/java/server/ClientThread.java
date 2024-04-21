@@ -6,7 +6,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-public class ClientThread extends Thread{
+public class ClientThread extends Thread {
 
     private Socket clientSocket;
     private PrintWriter output;
@@ -14,23 +14,26 @@ public class ClientThread extends Thread{
 
     private Server server;
 
-    public ClientThread(Server server,Socket clientSocket) throws IOException {
+    private String name;
+
+    public ClientThread(Server server, Socket clientSocket) throws IOException {
         this.server = server;
         this.clientSocket = clientSocket;
         output = new PrintWriter(clientSocket.getOutputStream(), true);
         input = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
+        this.name = enteringName(input, output);
 
 
     }
 
     @Override
     public void run() {
+        currentThread().setName(this.name);
         System.out.println("A Thread started. Current ID: " + currentThread().getName());
 
-        enteringName(input, output);
 
-        try{
+        try {
 
             while (true) {
                 String receivedMessage = input.readLine();
@@ -58,7 +61,7 @@ public class ClientThread extends Thread{
     private void sendToEveryone(String receivedMessage) {
         for (ClientThread client : server.getClientThreadsList()) {
 
-            if(client == this){
+            if (client == this) {
                 continue;
             }
 
@@ -66,14 +69,12 @@ public class ClientThread extends Thread{
         }
     }
 
-    private void enteringName(BufferedReader in, PrintWriter out){
+    private String enteringName(BufferedReader in, PrintWriter out) {
 
         String name;
 
-        out.println("Enter a name: ");
-
         try {
-            while(true) {
+            while (true) {
                 name = in.readLine();
                 if (server.getNames().contains(name) || name.isBlank()) {
                     out.println("This name is not available. Please enter another name: ");
@@ -95,12 +96,16 @@ public class ClientThread extends Thread{
 
         for (ClientThread client : server.getClientThreadsList()) {
 
-            if(client == this){
+            if (client == this) {
                 continue;
             }
             client.output.println("%s joined the room".formatted(currentThread().getName()));
         }
+
+        return name;
     }
-            }
+
+
+}
 
 
