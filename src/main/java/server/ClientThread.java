@@ -26,11 +26,10 @@ public class ClientThread extends Thread{
 
     @Override
     public void run() {
-        System.out.println("A Thread started. ID: " + currentThread().getName());
-        System.out.println("List from ClientThread: " + server.getClientThreadsList());
+        System.out.println("A Thread started. Current ID: " + currentThread().getName());
 
         enteringName(input, output);
-        currentThread().
+
         try{
 
             while (true) {
@@ -74,12 +73,23 @@ public class ClientThread extends Thread{
         out.println("Enter a name: ");
 
         try {
-            name = in.readLine();
+            while(true) {
+                name = in.readLine();
+                if (server.getNames().contains(name) || name.isBlank()) {
+                    out.println("This name is not available. Please enter another name: ");
+                } else {
+                    server.getNames().add(name);
+                    break;
+                }
+
+            }
+
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
         currentThread().setName(name);
+        System.out.println("New Thread-ID: " + currentThread().getName());
 
         out.println("Welcome " + name + "!");
 

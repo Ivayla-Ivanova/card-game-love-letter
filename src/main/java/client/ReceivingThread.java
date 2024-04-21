@@ -12,12 +12,10 @@ public class ReceivingThread extends Thread {
 
     public ReceivingThread(Socket clientSocket) {
         this.clientSocket = clientSocket;
-        System.out.println("ReceivingTread was created.");
+
     }
 
     public void run() {
-
-        System.out.println("ReceivingThread started");
 
         try(BufferedReader input = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()))) {
 

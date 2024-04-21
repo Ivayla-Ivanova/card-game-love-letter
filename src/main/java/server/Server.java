@@ -13,11 +13,14 @@ public class Server {
     private List<ClientThread> clientThreads;
     private ServerSocket serverSocket;
 
+    private Set<String> names;
+
     private static Server uniqueInstance = null;
 
     private Server() {
 
         this.clientThreads = new ArrayList<>();
+        this.names = new HashSet<>();
         try {
             serverSocket = new ServerSocket(5000);
             System.out.println("Server started. Listening on port 5000");
@@ -42,13 +45,18 @@ public class Server {
     }
 
     public synchronized void removeClientThread(ClientThread client) {
+
         clientThreads.remove(client);
     }
 
     public synchronized List<ClientThread> getClientThreadsList() {
-        return new ArrayList<>(clientThreads);
+
+        return this.clientThreads;
     }
 
+    public synchronized Set<String> getNames() {
 
+        return this.names;
+    }
 
 }
