@@ -32,11 +32,12 @@ class Server {
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("A client connected.");
 
-                //Creating a new thread for each client.
-                ServerThread client = new ServerThread(this, clientSocket);
-                serverThreads.add(client);
-                client.start();
+                //Creating a new connector thread for each client.
+                ConnectingThread connector = new ConnectingThread(this, clientSocket);
+                connector.start();
             }
+
+
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -62,6 +63,10 @@ class Server {
     public synchronized Set<String> getNames() {
 
         return this.names;
+    }
+
+    public synchronized void removeName(String name){
+        names.remove(name);
     }
 
 }

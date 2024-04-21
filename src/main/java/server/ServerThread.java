@@ -46,6 +46,7 @@ class ServerThread extends Thread {
                 if (receivedMessage == null) {
                     System.out.println(currentThread().getName() + " interrupted.");
                     server.removeServerThread(this);
+                    server.removeName(currentThread().getName());
                     for (ServerThread client : server.getServerThreadsList()) {
 
                         client.output.println("%s left the room".formatted(currentThread().getName()));
@@ -81,6 +82,7 @@ class ServerThread extends Thread {
 
         //Accepting an entered name and adding it to the set of names
         try {
+
             while (true) {
                 name = in.readLine();
                 if (server.getNames().contains(name) || name.isBlank()) {
