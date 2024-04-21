@@ -6,7 +6,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-public class ClientThread extends Thread {
+class ServerThread extends Thread {
 
     private Socket clientSocket;
     private PrintWriter output;
@@ -16,12 +16,13 @@ public class ClientThread extends Thread {
 
     private String name;
 
-    public ClientThread(Server server, Socket clientSocket) throws IOException {
+    public ServerThread(Server server, Socket clientSocket) throws IOException {
         this.server = server;
         this.clientSocket = clientSocket;
         output = new PrintWriter(clientSocket.getOutputStream(), true);
         input = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
+        // A Thread cannot start executing before entering a valid name
         this.name = enteringName(input, output);
 
 
@@ -29,6 +30,7 @@ public class ClientThread extends Thread {
 
     @Override
     public void run() {
+
         currentThread().setName(this.name);
         System.out.println("A Thread started. Current ID: " + currentThread().getName());
 
@@ -36,12 +38,15 @@ public class ClientThread extends Thread {
         try {
 
             while (true) {
+
+                // Receiving messages from the client
                 String receivedMessage = input.readLine();
 
-                if (receivedMessage.equals("bye")) {
+                // Clean up after the client disconnects
+                if (receivedMessage == null) {
                     System.out.println(currentThread().getName() + " interrupted.");
-                    server.removeClientThread(this);
-                    for (ClientThread client : server.getClientThreadsList()) {
+                    server.removeServerThread(this);
+                    for (ServerThread client : server.getServerThreadsList()) {
 
                         client.output.println("%s left the room".formatted(currentThread().getName()));
                     }
@@ -58,8 +63,9 @@ public class ClientThread extends Thread {
         }
     }
 
+    // Forwarding received messages from the client to other threads
     private void sendToEveryone(String receivedMessage) {
-        for (ClientThread client : server.getClientThreadsList()) {
+        for (ServerThread client : server.getServerThreadsList()) {
 
             if (client == this) {
                 continue;
@@ -73,6 +79,7 @@ public class ClientThread extends Thread {
 
         String name;
 
+        //Accepting an entered name and adding it to the set of names
         try {
             while (true) {
                 name = in.readLine();
@@ -89,17 +96,15 @@ public class ClientThread extends Thread {
             throw new RuntimeException(e);
         }
 
-        currentThread().setName(name);
-        System.out.println("New Thread-ID: " + currentThread().getName());
-
         out.println("Welcome " + name + "!");
 
-        for (ClientThread client : server.getClientThreadsList()) {
+        //Informing other threads that a new client has joined
+        for (ServerThread client : server.getServerThreadsList()) {
 
             if (client == this) {
                 continue;
             }
-            client.output.println("%s joined the room".formatted(currentThread().getName()));
+            client.output.println("%s joined the room".formatted(name));
         }
 
         return name;

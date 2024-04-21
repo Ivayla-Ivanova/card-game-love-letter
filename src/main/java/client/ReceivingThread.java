@@ -1,22 +1,17 @@
 package client;
 
-import server.ClientThread;
-
-import javax.swing.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 
-public class ReceivingThread extends Thread {
+class ReceivingThread extends Thread {
 
     private Socket clientSocket;
 
 
-
     public ReceivingThread(Socket clientSocket) {
         this.clientSocket = clientSocket;
-
 
     }
 

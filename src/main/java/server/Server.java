@@ -8,28 +8,33 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class Server {
+class Server {
 
-    private List<ClientThread> clientThreads;
+    private List<ServerThread> serverThreads;
     private ServerSocket serverSocket;
 
     private Set<String> names;
 
     private static Server uniqueInstance = null;
 
+    // Constructor for a Singleton instance
     private Server() {
 
-        this.clientThreads = new ArrayList<>();
+        this.serverThreads = new ArrayList<>();
         this.names = new HashSet<>();
+
         try {
             serverSocket = new ServerSocket(5000);
             System.out.println("Server started. Listening on port 5000");
+
+            //Accepting multiple client connections
             while (true) {
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("A client connected.");
-                ClientThread client = new ClientThread(this, clientSocket);
-                clientThreads.add(client);
-                //System.out.println(clientThreads);
+
+                //Creating a new thread for each client.
+                ServerThread client = new ServerThread(this, clientSocket);
+                serverThreads.add(client);
                 client.start();
             }
         } catch (IOException e) {
@@ -44,14 +49,14 @@ public class Server {
         return uniqueInstance;
     }
 
-    public synchronized void removeClientThread(ClientThread client) {
+    public synchronized void removeServerThread(ServerThread client) {
 
-        clientThreads.remove(client);
+        serverThreads.remove(client);
     }
 
-    public synchronized List<ClientThread> getClientThreadsList() {
+    public synchronized List<ServerThread> getServerThreadsList() {
 
-        return this.clientThreads;
+        return this.serverThreads;
     }
 
     public synchronized Set<String> getNames() {
