@@ -19,11 +19,11 @@ class ServerThread extends Thread {
     public ServerThread(Server server, Socket clientSocket) throws IOException {
         this.server = server;
         this.clientSocket = clientSocket;
-        output = new PrintWriter(clientSocket.getOutputStream(), true);
-        input = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+        this.output = new PrintWriter(clientSocket.getOutputStream(), true);
+        this.input = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
         // A Thread cannot start executing before entering a valid name
-        this.name = enteringName(input, output);
+        this.name = enteringName();
 
 
     }
@@ -31,52 +31,115 @@ class ServerThread extends Thread {
     @Override
     public void run() {
 
-        currentThread().setName(this.name);
-        System.out.println("A Thread started. Current ID: " + currentThread().getName());
+        if (this.name == null) {
+
+            this.output.close();
+            this.interrupt();
+            System.out.println("Client disconnected before entering the chat.");
+        } else {
+            this.setName(this.name);
+            System.out.println("A new Thread started. ID: " + currentThread().getName());
 
 
-        try {
+            try {
 
-            while (true) {
+                while (true) {
 
-                // Receiving messages from the client
-                String receivedMessage = input.readLine();
+                    // Receiving messages from the client
+                    String receivedMessage = input.readLine();
 
-                // Clean up after the client disconnects
-                if (receivedMessage == null) {
-                    System.out.println(currentThread().getName() + " interrupted.");
-                    server.removeServerThread(this);
-                    server.removeName(currentThread().getName());
-                    for (ServerThread client : server.getServerThreadsList()) {
 
-                        client.output.println("%s left the room".formatted(currentThread().getName()));
+                    // Clean up after the client disconnects
+                    if (receivedMessage == null) {
+                        System.out.println(this.getName() + " interrupted.");
+                        server.removeServerThread(this);
+                        server.removeName(this.getName());
+                        for (ServerThread client : server.getServerThreadsList()) {
+
+                            sendingMessage(client, "%s left the room".formatted(this.getName()));
+                        }
+
+                        this.output.close();
+                        this.interrupt();
+                        break;
                     }
 
-                    output.close();
-                    this.interrupt();
-                    break;
-                } else {
-                    sendToEveryone(receivedMessage);
+                    if(receivedMessage.isBlank()){
+                        continue;
+                    }
+
+                    if (receivedMessage.startsWith("@")) {
+                        sendingPersonalMessage(receivedMessage);
+                    } else {
+                        sendToEveryone(receivedMessage);
+                    }
                 }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
+    }
+
+
+    private void sendingMessage(ServerThread client, String message){
+
+        client.output.println(message);
     }
 
     // Forwarding received messages from the client to other threads
     private void sendToEveryone(String receivedMessage) {
+
+        String sendMessage = this.getName() + ": " + receivedMessage;
+
         for (ServerThread client : server.getServerThreadsList()) {
 
             if (client == this) {
                 continue;
             }
 
-            client.output.println(currentThread().getName() + ": " + receivedMessage);
+            sendingMessage(client, sendMessage);
         }
     }
 
-    private String enteringName(BufferedReader in, PrintWriter out) {
+    private void sendingPersonalMessage(String receivedMessage){
+
+        String [] temp = receivedMessage.split(" ", 2);
+
+        if (temp.length != 2) {
+
+            String sendMessage = """
+            Invalid request.
+            Please send private messages by e.g. writing '@name message'!""";
+            sendingMessage(this, sendMessage);
+            return;
+        }
+
+        String addresseeName = temp[0].substring(1);
+
+        if(!server.getNames().contains(addresseeName) || addresseeName.equals(this.name)){
+            String sendMessage = """
+            Invalid name.
+            Please send private messages by e.g. writing '@name message'!""";
+            sendingMessage(this, sendMessage);
+
+        }
+        String sendMessage = "[private] " + this.getName() + ": "
+                + receivedMessage.substring(receivedMessage.indexOf(" ") + 1);
+
+
+        for (ServerThread client : server.getServerThreadsList()) {
+
+            if(client == this){
+                continue;
+            }
+            if (client.getName().equals(addresseeName)) {
+                sendingMessage(client, sendMessage);
+            }
+        }
+
+    }
+
+    private String enteringName() {
 
         String name;
 
@@ -84,9 +147,15 @@ class ServerThread extends Thread {
         try {
 
             while (true) {
-                name = in.readLine();
+                name = this.input.readLine();
+
+                if(name == null){
+                    return null;
+                }
+
                 if (server.getNames().contains(name) || name.isBlank()) {
-                    out.println("This name is not available. Please enter another name: ");
+                    String sendMessage = "This name is not available. Please enter another name: ";
+                    sendingMessage(this, sendMessage);
                 } else {
                     server.getNames().add(name);
                     break;
@@ -98,7 +167,7 @@ class ServerThread extends Thread {
             throw new RuntimeException(e);
         }
 
-        out.println("Welcome " + name + "!");
+        sendingMessage(this, "Welcome " + name + "!");
 
         //Informing other threads that a new client has joined
         for (ServerThread client : server.getServerThreadsList()) {
@@ -106,7 +175,7 @@ class ServerThread extends Thread {
             if (client == this) {
                 continue;
             }
-            client.output.println("%s joined the room".formatted(name));
+            sendingMessage(client, "%s joined the room".formatted(name));
         }
 
         return name;

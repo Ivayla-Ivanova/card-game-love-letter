@@ -13,8 +13,7 @@ class Client {
 
         try{
             Socket clientSocket = new Socket(hostname, port);
-            System.out.println("Connected to server successfully!");
-            System.out.println("Enter a name: ");
+            System.out.println("Enter 'bye' to exit \nEnter a name: ");
 
             ReceivingThread receivingThread = new ReceivingThread(clientSocket);
             receivingThread.start();
