@@ -17,6 +17,9 @@ class Server {
 
     private int activePlayerCount;
 
+    private Game game;
+    private boolean hasGameStarted;
+
     // Constructor for a Singleton instance
     private Server() {
 
@@ -24,6 +27,8 @@ class Server {
         this.names = new HashSet<>();
         this.activePlayerCount = 0;
         this.activePlayersList = new ArrayList<>();
+        this.hasGameStarted = false;
+        this.game = null;
 
         try {
             serverSocket = new ServerSocket(5000);
@@ -127,6 +132,20 @@ class Server {
 
         this.activePlayersList.remove(player);
     }
+
+    public synchronized boolean getHasGameStarted(){
+        return this.hasGameStarted;
+    }
+
+    public synchronized void startingGame(){
+
+        this.game = Game.getInstance(this);
+        this.hasGameStarted = true;
+
+
+    }
+
+
 
 
 

@@ -155,7 +155,11 @@ class ServerThread extends Thread {
 
             exitingGame();
 
-        } else {
+        }else if(receivedMessage.substring(1).equals("startGame")){
+
+            startingGame();
+
+        }else {
 
             String sendMessage = "You have entered an invalid game command. Please try again.";
             sendingToOwnClientMessage(sendMessage);
@@ -163,7 +167,7 @@ class ServerThread extends Thread {
 
     }
 
-    private void sendingToActivePlayersMessages(String message){
+    private void sendingToAllActivePlayersMessages(String message){
 
         for (ServerThread client : server.getActivePlayersList()) {
 
@@ -215,6 +219,13 @@ class ServerThread extends Thread {
     private void joiningGame(){
 
         try {
+
+            if(server.getHasGameStarted()){
+                String sendMessage = "The game has started. You cannot join it anymore.";
+                sendingToOwnClientMessage(sendMessage);
+                return;
+            }
+
             if(haveJoinedGame == true){
                 String sendMessage = "You have already joined the game.";
                 sendingToOwnClientMessage(sendMessage);
@@ -275,10 +286,45 @@ class ServerThread extends Thread {
 
                     sendingMessage(player, sendToEveryoneMessage);
                 }
-                printGameMessagesToActivePlayers(server.getActivePlayerCount());
+                if(server.getHasGameStarted() == false) {
+                    printGameMessagesToActivePlayers(server.getActivePlayerCount());
+                }
             }
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
+        }
+
+    }
+
+    public void startingGame(){
+
+        if(!haveJoinedGame){
+            String sendMessage = "You need to first join the game to start it.";
+            sendingToOwnClientMessage(sendMessage);
+            return;
+        }
+
+        if(server.getHasGameStarted()){
+            String sendMessage = "The game has already started.";
+            sendingToOwnClientMessage(sendMessage);
+            return;
+        }
+
+        if(server.getActivePlayerCount() < 2){
+            printGameMessagesToActivePlayers(server.getActivePlayerCount());
+            return;
+        }
+
+        server.startingGame();
+        String sendMessageToActivePlayers = "The game has started.";
+        sendingToAllActivePlayersMessages(sendMessageToActivePlayers);
+        String sendMessageToClients = "The game has started. You cannot join it anymore.";
+        for(ServerThread client : server.getServerThreadsList()){
+
+            if(server.getActivePlayersList().contains(client)){
+                continue;
+            }
+            sendingMessage(client, sendMessageToClients);
         }
 
     }
@@ -289,21 +335,26 @@ class ServerThread extends Thread {
         String countMessage;
 
         switch (count) {
+            case 0:
+                countMessage = "There needs to be at least two players to start the game.";
+                sendingToAllActivePlayersMessages(countMessage);
+                break;
+
             case 1:
                 countMessage = "Waiting for at least one more player to start the game.";
-                sendingToActivePlayersMessages(countMessage);
+                sendingToAllActivePlayersMessages(countMessage);
                 break;
             case 2:
                 countMessage = "You can start the game now by typing $startGame or wait for one or two more people to join.";
-                sendingToActivePlayersMessages(countMessage);
+                sendingToAllActivePlayersMessages(countMessage);
                 break;
             case 3:
                 countMessage = "You can start the game now by typing $startGame or wait for one more person to join.";
-                sendingToActivePlayersMessages(countMessage);
+                sendingToAllActivePlayersMessages(countMessage);
                 break;
             case 4:
                 countMessage = "You can start the game now by typing $startGame.";
-                sendingToActivePlayersMessages(countMessage);
+                sendingToAllActivePlayersMessages(countMessage);
                 break;
             default:
                 // Do nothing
