@@ -9,19 +9,19 @@ import java.util.List;
 import java.util.Set;
 
 class Server {
-
+    private static Server instance = null;
     private List<ServerThread> serverThreads;
     private ServerSocket serverSocket;
-
     private Set<String> names;
 
-    private static Server uniqueInstance = null;
+    private int activePlayerCount;
 
     // Constructor for a Singleton instance
     private Server() {
 
         this.serverThreads = new ArrayList<>();
         this.names = new HashSet<>();
+        this.activePlayerCount = 0;
 
         try {
             serverSocket = new ServerSocket(5000);
@@ -44,10 +44,10 @@ class Server {
     }
 
     public static synchronized Server getInstance() {
-        if (uniqueInstance == null)
-            uniqueInstance = new Server();
+        if (instance == null)
+            instance = new Server();
 
-        return uniqueInstance;
+        return instance;
     }
 
     public synchronized void removeServerThread(ServerThread client) {
@@ -68,5 +68,40 @@ class Server {
     public synchronized void removeName(String name){
         names.remove(name);
     }
+
+    public synchronized int getActivePlayerCount(){
+        return this.activePlayerCount;
+    }
+
+    public synchronized boolean increaseActivePlayerCount(ServerThread client) throws InterruptedException {
+
+        if(this.activePlayerCount + 1 > 4){
+            System.out.println("ServerThread " + client.getName() + " cannot join the game.");
+            return false;
+        }
+
+        this.activePlayerCount = this.activePlayerCount + 1;
+        System.out.println("ServerThread " + client.getName() + " joined the game.");
+        notifyAll();
+        return true;
+
+    }
+
+    public synchronized boolean decreaseActivePlayerCount(ServerThread client) throws InterruptedException {
+
+        if(this.activePlayerCount - 1 < 0){
+            System.out.println("ServerThread " + client.getName()
+                    + " tries to decrease the number of active players below 0.");
+            return false;
+        }
+
+        this.activePlayerCount = this.activePlayerCount - 1;
+        System.out.println("ServerThread " + client.getName() + " have exited the game.");
+        notifyAll();
+        return true;
+
+    }
+
+
 
 }

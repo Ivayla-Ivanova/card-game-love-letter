@@ -16,6 +16,8 @@ class ServerThread extends Thread {
 
     private String name;
 
+    private boolean haveJoinedGame;
+
     public ServerThread(Server server, Socket clientSocket) throws IOException {
         this.server = server;
         this.clientSocket = clientSocket;
@@ -24,6 +26,8 @@ class ServerThread extends Thread {
 
         // A Thread cannot start executing before entering a valid name
         this.name = enteringName();
+
+        this.haveJoinedGame = false;
 
 
     }
@@ -38,7 +42,7 @@ class ServerThread extends Thread {
             System.out.println("Client disconnected before entering the chat.");
         } else {
             this.setName(this.name);
-            System.out.println("A new Thread started. ID: " + currentThread().getName());
+            System.out.println("A new ServerThread started. ID: " + this.name);
 
 
             try {
@@ -52,26 +56,26 @@ class ServerThread extends Thread {
                     // Clean up after the client disconnects
                     if (receivedMessage == null) {
                         System.out.println(this.getName() + " interrupted.");
+                        exitingGame();
+
                         server.removeServerThread(this);
                         server.removeName(this.getName());
-                        for (ServerThread client : server.getServerThreadsList()) {
 
-                            sendingMessage(client, "%s left the room".formatted(this.getName()));
-                        }
+                        String sendMessage = "%s left the room".formatted(this.getName());
+                        sendToEveryone(sendMessage);
 
                         this.output.close();
                         this.interrupt();
                         break;
-                    }
-
-                    if(receivedMessage.isBlank()){
-                        continue;
-                    }
-
-                    if (receivedMessage.startsWith("@")) {
+                    } else if(receivedMessage.isBlank()){
+                        //Do nothing
+                    } else if (receivedMessage.startsWith("@")) {
                         sendingPersonalMessage(receivedMessage);
+                    } else if(receivedMessage.startsWith("$")){
+                        sendingGameMessages(receivedMessage);
                     } else {
-                        sendToEveryone(receivedMessage);
+                        String sendMessage = this.getName() + ": " + receivedMessage;
+                        sendToEveryone(sendMessage);
                     }
                 }
             } catch (IOException e) {
@@ -80,16 +84,13 @@ class ServerThread extends Thread {
         }
     }
 
-
     private void sendingMessage(ServerThread client, String message){
 
         client.output.println(message);
     }
 
     // Forwarding received messages from the client to other threads
-    private void sendToEveryone(String receivedMessage) {
-
-        String sendMessage = this.getName() + ": " + receivedMessage;
+    private void sendToEveryone(String message) {
 
         for (ServerThread client : server.getServerThreadsList()) {
 
@@ -97,8 +98,14 @@ class ServerThread extends Thread {
                 continue;
             }
 
-            sendingMessage(client, sendMessage);
+            sendingMessage(client, message);
         }
+    }
+
+    private void sendingToOwnClientMessage(String message){
+
+        sendingMessage(this, message);
+
     }
 
     private void sendingPersonalMessage(String receivedMessage){
@@ -110,7 +117,7 @@ class ServerThread extends Thread {
             String sendMessage = """
             Invalid request.
             Please send private messages by e.g. writing '@name message'!""";
-            sendingMessage(this, sendMessage);
+            sendingToOwnClientMessage( sendMessage);
             return;
         }
 
@@ -120,11 +127,10 @@ class ServerThread extends Thread {
             String sendMessage = """
             Invalid name.
             Please send private messages by e.g. writing '@name message'!""";
-            sendingMessage(this, sendMessage);
+            sendingToOwnClientMessage(sendMessage);
 
         }
-        String sendMessage = "[private] " + this.getName() + ": "
-                + receivedMessage.substring(receivedMessage.indexOf(" ") + 1);
+        String sendMessage = "[private] " + this.getName() + ": " + temp[1];
 
 
         for (ServerThread client : server.getServerThreadsList()) {
@@ -135,6 +141,24 @@ class ServerThread extends Thread {
             if (client.getName().equals(addresseeName)) {
                 sendingMessage(client, sendMessage);
             }
+        }
+
+    }
+
+    private void sendingGameMessages(String receivedMessage){
+
+        if(receivedMessage.substring(1).equals("joinGame")){
+
+            joiningGame();
+
+        }else if (receivedMessage.substring(1).equals("exitGame")){
+
+            exitingGame();
+
+        } else {
+
+            String sendMessage = "You have entered an invalid game command. Please try again.";
+            sendingToOwnClientMessage(sendMessage);
         }
 
     }
@@ -155,7 +179,7 @@ class ServerThread extends Thread {
 
                 if (server.getNames().contains(name) || name.isBlank()) {
                     String sendMessage = "This name is not available. Please enter another name: ";
-                    sendingMessage(this, sendMessage);
+                    sendingToOwnClientMessage(sendMessage);
                 } else {
                     server.getNames().add(name);
                     break;
@@ -167,18 +191,101 @@ class ServerThread extends Thread {
             throw new RuntimeException(e);
         }
 
-        sendingMessage(this, "Welcome " + name + "!");
+        String welcomeMessage = "Welcome " + name + "!\nIf you wish to join the game, please type $joinGame.";
+        sendingToOwnClientMessage(welcomeMessage);
 
         //Informing other threads that a new client has joined
-        for (ServerThread client : server.getServerThreadsList()) {
 
-            if (client == this) {
-                continue;
-            }
-            sendingMessage(client, "%s joined the room".formatted(name));
-        }
+        sendToEveryone("%s joined the room".formatted(name));
+
 
         return name;
+    }
+
+    private void joiningGame(){
+
+        try {
+            if(haveJoinedGame == true){
+                String sendMessage = "You have already joined the game.";
+                sendingToOwnClientMessage(sendMessage);
+                return;
+            }
+
+            if(server.increaseActivePlayerCount(this) == false){
+
+                String sendMessage = "You were not able to join the game. Please try again later.";
+                sendingToOwnClientMessage(sendMessage);
+            } else {
+                this.haveJoinedGame = true;
+                String sendMessage = "You joined the game.\nTo exit the game type $exitGame";
+                sendingToOwnClientMessage(sendMessage);
+                String sendToEveryoneMessage = this.name + " joined the game";
+                sendToEveryone(sendToEveryoneMessage);
+                String countMessage;
+                switch(server.getActivePlayerCount()){
+                    case 1:
+                        countMessage = "Waiting for at least one more player to start the game.";
+                        sendToEveryone(countMessage);
+                        break;
+                    case 2:
+                        countMessage = "You can start the game now by typing $startGame or wait for one or two more people to join.";
+                        sendToEveryone(countMessage);
+                        break;
+                    case 3:
+                        countMessage = "You can start the game now by typing $startGame or wait for one more person to join.";
+                        sendToEveryone(countMessage);
+                        break;
+                    default:
+                        // Do nothing
+                }
+            }
+
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    private void exitingGame(){
+
+        if(haveJoinedGame == false){
+            String sendMessage = "You cannot exit the game if you have not yet joined it.";
+            sendingToOwnClientMessage(sendMessage);
+            return;
+        }
+
+        try {
+
+            if(server.decreaseActivePlayerCount(this) == false){
+                String sendMessage = "You were not able to exit the game.";
+            } else {
+                this.haveJoinedGame = false;
+                String sendMessage = "You have exited the game.";
+                sendingToOwnClientMessage(sendMessage);
+                String sendToEveryoneMessage = this.name + " has exited the game";
+                sendToEveryone(sendToEveryoneMessage);
+                String countMessage;
+                switch(server.getActivePlayerCount()){
+                    case 1:
+                        countMessage = "Waiting for at least one more player to start the game.";
+                        sendToEveryone(countMessage);
+                        break;
+                    case 2:
+                        countMessage = "You can start the game now by typing $startGame or wait for one or two more people to join.";
+                        sendToEveryone(countMessage);
+                        break;
+                    case 3:
+                        countMessage = "You can start the game now by typing $startGame or wait for one more person to join.";
+                        sendToEveryone(countMessage);
+                        break;
+                    default:
+                        // Do nothing
+                }
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
 
