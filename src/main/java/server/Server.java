@@ -13,6 +13,7 @@ class Server {
     private List<ServerThread> serverThreads;
     private ServerSocket serverSocket;
     private Set<String> names;
+    private List<ServerThread> activePlayersList;
 
     private int activePlayerCount;
 
@@ -22,25 +23,34 @@ class Server {
         this.serverThreads = new ArrayList<>();
         this.names = new HashSet<>();
         this.activePlayerCount = 0;
+        this.activePlayersList = new ArrayList<>();
 
         try {
             serverSocket = new ServerSocket(5000);
             System.out.println("Server started. Listening on port 5000");
 
-            //Accepting multiple client connections
-            while (true) {
-                Socket clientSocket = serverSocket.accept();
-                System.out.println("A client connected.");
-
-                //Creating a new connector thread for each client.
-                ConnectingThread connector = new ConnectingThread(this, clientSocket);
-                connector.start();
-            }
-
-
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public void runServer(){
+
+        //Accepting multiple client connections
+        while (true) {
+            Socket clientSocket = null;
+            try {
+                clientSocket = serverSocket.accept();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println("A client connected.");
+
+            //Creating a new connector thread for each client.
+            ConnectingThread connector = new ConnectingThread(this, clientSocket);
+            connector.start();
+        }
+
     }
 
     public static synchronized Server getInstance() {
@@ -100,6 +110,22 @@ class Server {
         notifyAll();
         return true;
 
+    }
+
+    public synchronized List<ServerThread> getActivePlayersList() {
+
+        return this.activePlayersList;
+    }
+
+    public synchronized void addToActivePlayersList(ServerThread player){
+
+        this.activePlayersList.add(player);
+
+    }
+
+    public synchronized void removeFromActivePlayersList(ServerThread player){
+
+        this.activePlayersList.remove(player);
     }
 
 

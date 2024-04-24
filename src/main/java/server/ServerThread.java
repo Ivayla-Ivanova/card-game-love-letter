@@ -94,10 +94,6 @@ class ServerThread extends Thread {
 
         for (ServerThread client : server.getServerThreadsList()) {
 
-            if (client == this) {
-                continue;
-            }
-
             sendingMessage(client, message);
         }
     }
@@ -130,7 +126,11 @@ class ServerThread extends Thread {
             sendingToOwnClientMessage(sendMessage);
 
         }
+        if(temp[1].isBlank()){
+            return;
+        }
         String sendMessage = "[private] " + this.getName() + ": " + temp[1];
+
 
 
         for (ServerThread client : server.getServerThreadsList()) {
@@ -160,6 +160,16 @@ class ServerThread extends Thread {
             String sendMessage = "You have entered an invalid game command. Please try again.";
             sendingToOwnClientMessage(sendMessage);
         }
+
+    }
+
+    private void sendingToActivePlayersMessages(String message){
+
+        for (ServerThread client : server.getActivePlayersList()) {
+
+            sendingMessage(client, message);
+        }
+
 
     }
 
@@ -216,28 +226,21 @@ class ServerThread extends Thread {
                 String sendMessage = "You were not able to join the game. Please try again later.";
                 sendingToOwnClientMessage(sendMessage);
             } else {
+                server.addToActivePlayersList(this);
                 this.haveJoinedGame = true;
-                String sendMessage = "You joined the game.\nTo exit the game type $exitGame";
+                String sendMessage = "You joined the game.\nTo exit the game type $exitGame.";
                 sendingToOwnClientMessage(sendMessage);
                 String sendToEveryoneMessage = this.name + " joined the game";
-                sendToEveryone(sendToEveryoneMessage);
-                String countMessage;
-                switch(server.getActivePlayerCount()){
-                    case 1:
-                        countMessage = "Waiting for at least one more player to start the game.";
-                        sendToEveryone(countMessage);
-                        break;
-                    case 2:
-                        countMessage = "You can start the game now by typing $startGame or wait for one or two more people to join.";
-                        sendToEveryone(countMessage);
-                        break;
-                    case 3:
-                        countMessage = "You can start the game now by typing $startGame or wait for one more person to join.";
-                        sendToEveryone(countMessage);
-                        break;
-                    default:
-                        // Do nothing
+                for(ServerThread player : server.getActivePlayersList()){
+
+                    if(player == this){
+                        continue;
+                    }
+
+                    sendingMessage(player, sendToEveryoneMessage);
                 }
+                printGameMessagesToActivePlayers(server.getActivePlayerCount());
+
             }
 
         } catch (InterruptedException e) {
@@ -260,30 +263,50 @@ class ServerThread extends Thread {
                 String sendMessage = "You were not able to exit the game.";
             } else {
                 this.haveJoinedGame = false;
+                server.removeFromActivePlayersList(this);
                 String sendMessage = "You have exited the game.";
                 sendingToOwnClientMessage(sendMessage);
                 String sendToEveryoneMessage = this.name + " has exited the game";
-                sendToEveryone(sendToEveryoneMessage);
-                String countMessage;
-                switch(server.getActivePlayerCount()){
-                    case 1:
-                        countMessage = "Waiting for at least one more player to start the game.";
-                        sendToEveryone(countMessage);
-                        break;
-                    case 2:
-                        countMessage = "You can start the game now by typing $startGame or wait for one or two more people to join.";
-                        sendToEveryone(countMessage);
-                        break;
-                    case 3:
-                        countMessage = "You can start the game now by typing $startGame or wait for one more person to join.";
-                        sendToEveryone(countMessage);
-                        break;
-                    default:
-                        // Do nothing
+                for(ServerThread player : server.getActivePlayersList()){
+
+                    if(player == this){
+                        continue;
+                    }
+
+                    sendingMessage(player, sendToEveryoneMessage);
                 }
+                printGameMessagesToActivePlayers(server.getActivePlayerCount());
             }
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
+        }
+
+    }
+
+    private void printGameMessagesToActivePlayers(int count){
+
+
+        String countMessage;
+
+        switch (count) {
+            case 1:
+                countMessage = "Waiting for at least one more player to start the game.";
+                sendingToActivePlayersMessages(countMessage);
+                break;
+            case 2:
+                countMessage = "You can start the game now by typing $startGame or wait for one or two more people to join.";
+                sendingToActivePlayersMessages(countMessage);
+                break;
+            case 3:
+                countMessage = "You can start the game now by typing $startGame or wait for one more person to join.";
+                sendingToActivePlayersMessages(countMessage);
+                break;
+            case 4:
+                countMessage = "You can start the game now by typing $startGame.";
+                sendingToActivePlayersMessages(countMessage);
+                break;
+            default:
+                // Do nothing
         }
 
     }
