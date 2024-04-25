@@ -2,10 +2,7 @@ package server.game;
 
 import server.game.cards.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 
 public class Deck {
@@ -18,6 +15,8 @@ public class Deck {
 
     List<Card> listOfCards;
 
+    Random random;
+
 
 
     private Card[] nextThreeTopCards;
@@ -28,6 +27,7 @@ public class Deck {
         this.topCard = null;
         this.nextThreeTopCards = new Card[3];
         this.listOfCards = new ArrayList<>();
+        this.random = new Random();
     }
 
     public static synchronized Deck getInstance(Game game) {
@@ -57,7 +57,11 @@ public class Deck {
         cardDeck[15] = new Guard();
 
         List<Card> tempList = Arrays.asList(cardDeck);
-        Collections.shuffle(tempList);
+
+        for(int i = 0; i < random.nextInt(12, 17); i++){
+            Collections.shuffle(tempList);
+            System.out.println(i + ": " + tempList);
+        }
 
         listOfCards.addAll(tempList);
         this.topCard = drawCard();

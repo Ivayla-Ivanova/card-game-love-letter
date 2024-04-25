@@ -12,7 +12,7 @@ import java.util.Set;
 
 public class Server {
     private static Server instance = null;
-    private List<ServerThread> serverThreads;
+    private ArrayList<ServerThread> serverThreads;
     private ServerSocket serverSocket;
     private Set<String> names;
     private List<ServerThread> activePlayersList;

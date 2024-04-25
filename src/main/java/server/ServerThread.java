@@ -27,7 +27,7 @@ public class ServerThread extends Thread {
 
     //Player attributes
 
-    private Card[] hand;
+    private Hand hand;
     private ArrayList<Card> discardPile;
     private int tokens;
     private boolean isInRound;
@@ -61,7 +61,7 @@ public class ServerThread extends Thread {
 
     public void resetPlayerAttributes(){
 
-        this.hand = new Card[2];
+        this.hand = new Hand();
         this.discardPile = new ArrayList<>();
         this.tokens = 0;
         this.isInRound = false;
@@ -74,6 +74,18 @@ public class ServerThread extends Thread {
 
     public int getDaysSinceLastDate(){
         return this.daysSinceLastDate;
+    }
+
+    public boolean getWonLastRound(){
+        return this.wonLastRound;
+    }
+
+    public void setIsOnTurn(boolean value){
+        this.isOnTurn = value;
+    }
+
+    public Hand getHand(){
+        return this.hand;
     }
 
     @Override
