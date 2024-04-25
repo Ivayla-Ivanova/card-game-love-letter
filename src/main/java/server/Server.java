@@ -1,5 +1,7 @@
 package server;
 
+import server.game.Game;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -8,7 +10,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-class Server {
+public class Server {
     private static Server instance = null;
     private List<ServerThread> serverThreads;
     private ServerSocket serverSocket;
@@ -143,6 +145,10 @@ class Server {
         this.hasGameStarted = true;
 
 
+    }
+
+    public synchronized Game getGame(){
+        return this.game;
     }
 
 

@@ -5,8 +5,15 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
-class ServerThread extends Thread {
+import server.game.cards.Card;
+
+public class ServerThread extends Thread {
+
+    //ServerThread attributes
 
     private Socket clientSocket;
     private PrintWriter output;
@@ -18,6 +25,19 @@ class ServerThread extends Thread {
 
     private boolean haveJoinedGame;
 
+    //Player attributes
+
+    private Card[] hand;
+    private ArrayList<Card> discardPile;
+    private int tokens;
+    private boolean isInRound;
+    private boolean wonLastRound;
+    private boolean isOnTurn;
+    private Card playedCard;
+    private int daysSinceLastDate;
+
+    private static Random randomGenerator = new Random();
+
     public ServerThread(Server server, Socket clientSocket) throws IOException {
         this.server = server;
         this.clientSocket = clientSocket;
@@ -26,10 +46,34 @@ class ServerThread extends Thread {
 
         // A Thread cannot start executing before entering a valid name
         this.name = enteringName();
-
         this.haveJoinedGame = false;
 
+        //Player
+        resetPlayerAttributes();
 
+
+    }
+
+    //Player methods
+    public void setIsInRound(boolean value){
+        this.isInRound = value;
+    }
+
+    public void resetPlayerAttributes(){
+
+        this.hand = new Card[2];
+        this.discardPile = new ArrayList<>();
+        this.tokens = 0;
+        this.isInRound = false;
+        this.wonLastRound = false;
+        this.isOnTurn = false;
+        this.playedCard = null;
+        this.daysSinceLastDate = randomGenerator.nextInt(366);
+
+    }
+
+    public int getDaysSinceLastDate(){
+        return this.daysSinceLastDate;
     }
 
     @Override
@@ -62,7 +106,7 @@ class ServerThread extends Thread {
                         server.removeName(this.getName());
 
                         String sendMessage = "%s left the room".formatted(this.getName());
-                        sendToEveryone(sendMessage);
+                        sendingMessageToEveryone(server.getServerThreadsList(), sendMessage);
 
                         this.output.close();
                         this.interrupt();
@@ -72,10 +116,10 @@ class ServerThread extends Thread {
                     } else if (receivedMessage.startsWith("@")) {
                         sendingPersonalMessage(receivedMessage);
                     } else if(receivedMessage.startsWith("$")){
-                        sendingGameMessages(receivedMessage);
+                        sendingGameMessage(receivedMessage);
                     } else {
                         String sendMessage = this.getName() + ": " + receivedMessage;
-                        sendToEveryone(sendMessage);
+                        sendingMessageToEveryone(server.getServerThreadsList(), sendMessage);
                     }
                 }
             } catch (IOException e) {
@@ -84,23 +128,23 @@ class ServerThread extends Thread {
         }
     }
 
-    private void sendingMessage(ServerThread client, String message){
+    private void sendingMessageToOneClient(ServerThread client, String message){
 
         client.output.println(message);
     }
 
     // Forwarding received messages from the client to other threads
-    private void sendToEveryone(String message) {
+    public void sendingMessageToEveryone(List<ServerThread> listOfClients, String message) {
 
-        for (ServerThread client : server.getServerThreadsList()) {
+        for (ServerThread client : listOfClients) {
 
-            sendingMessage(client, message);
+            sendingMessageToOneClient(client, message);
         }
     }
 
-    private void sendingToOwnClientMessage(String message){
+    public void sendingMessageToOwnClient(String message){
 
-        sendingMessage(this, message);
+        sendingMessageToOneClient(this, message);
 
     }
 
@@ -113,7 +157,7 @@ class ServerThread extends Thread {
             String sendMessage = """
             Invalid request.
             Please send private messages by e.g. writing '@name message'!""";
-            sendingToOwnClientMessage( sendMessage);
+            sendingMessageToOwnClient( sendMessage);
             return;
         }
 
@@ -123,7 +167,7 @@ class ServerThread extends Thread {
             String sendMessage = """
             Invalid name.
             Please send private messages by e.g. writing '@name message'!""";
-            sendingToOwnClientMessage(sendMessage);
+            sendingMessageToOwnClient(sendMessage);
 
         }
         if(temp[1].isBlank()){
@@ -135,17 +179,14 @@ class ServerThread extends Thread {
 
         for (ServerThread client : server.getServerThreadsList()) {
 
-            if(client == this){
-                continue;
-            }
             if (client.getName().equals(addresseeName)) {
-                sendingMessage(client, sendMessage);
+                sendingMessageToOneClient(client, sendMessage);
             }
         }
 
     }
 
-    private void sendingGameMessages(String receivedMessage){
+    private void sendingGameMessage(String receivedMessage){
 
         if(receivedMessage.substring(1).equals("joinGame")){
 
@@ -159,22 +200,41 @@ class ServerThread extends Thread {
 
             startingGame();
 
+        }else if(receivedMessage.substring(1).equals("help")){
+
+            printCardDescription();
+
         }else {
 
             String sendMessage = "You have entered an invalid game command. Please try again.";
-            sendingToOwnClientMessage(sendMessage);
+            sendingMessageToOwnClient(sendMessage);
         }
 
     }
-
-    private void sendingToAllActivePlayersMessages(String message){
+    public void sendingToAllPlayersExceptMe(String message){
 
         for (ServerThread client : server.getActivePlayersList()) {
 
-            sendingMessage(client, message);
+            if(client == this){
+                continue;
+            }
+
+            sendingMessageToOneClient(client, message);
         }
 
-
+    }
+    private void printCardDescription() {
+        String description = """ 
+                8-Princess (1): Lose if discarded.
+                7-Countess (1): Must be played if you have Kind or Prince in hand.
+                6-King (1): Trade hands with another player.
+                5-Prince (2): Choose another player. They discard their hand and draw a new card.
+                4-Handmaid (2): You cannot be chosen until your next turn.
+                3-Baron (2): Compare hands with another player; lower number is out.
+                2-Priest (2): Look at a player´s hand.
+                1-Guard (2): Guess a player´s hand; if correct the player is out.
+                """;
+        sendingMessageToOwnClient(description);
     }
 
     private String enteringName() {
@@ -193,7 +253,7 @@ class ServerThread extends Thread {
 
                 if (server.getNames().contains(name) || name.isBlank()) {
                     String sendMessage = "This name is not available. Please enter another name: ";
-                    sendingToOwnClientMessage(sendMessage);
+                    sendingMessageToOwnClient(sendMessage);
                 } else {
                     server.getNames().add(name);
                     break;
@@ -206,11 +266,11 @@ class ServerThread extends Thread {
         }
 
         String welcomeMessage = "Welcome " + name + "!\nIf you wish to join the game, please type $joinGame.";
-        sendingToOwnClientMessage(welcomeMessage);
+        sendingMessageToOwnClient(welcomeMessage);
 
         //Informing other threads that a new client has joined
 
-        sendToEveryone("%s joined the room".formatted(name));
+        sendingMessageToEveryone(server.getServerThreadsList(), "%s joined the room".formatted(name));
 
 
         return name;
@@ -222,25 +282,25 @@ class ServerThread extends Thread {
 
             if(server.getHasGameStarted()){
                 String sendMessage = "The game has started. You cannot join it anymore.";
-                sendingToOwnClientMessage(sendMessage);
+                sendingMessageToOwnClient(sendMessage);
                 return;
             }
 
             if(haveJoinedGame == true){
                 String sendMessage = "You have already joined the game.";
-                sendingToOwnClientMessage(sendMessage);
+                sendingMessageToOwnClient(sendMessage);
                 return;
             }
 
             if(server.increaseActivePlayerCount(this) == false){
 
                 String sendMessage = "You were not able to join the game. Please try again later.";
-                sendingToOwnClientMessage(sendMessage);
+                sendingMessageToOwnClient(sendMessage);
             } else {
                 server.addToActivePlayersList(this);
                 this.haveJoinedGame = true;
                 String sendMessage = "You joined the game.\nTo exit the game type $exitGame.";
-                sendingToOwnClientMessage(sendMessage);
+                sendingMessageToOwnClient(sendMessage);
                 String sendToEveryoneMessage = this.name + " joined the game";
                 for(ServerThread player : server.getActivePlayersList()){
 
@@ -248,7 +308,7 @@ class ServerThread extends Thread {
                         continue;
                     }
 
-                    sendingMessage(player, sendToEveryoneMessage);
+                    sendingMessageToOneClient(player, sendToEveryoneMessage);
                 }
                 printGameMessagesToActivePlayers(server.getActivePlayerCount());
 
@@ -264,7 +324,7 @@ class ServerThread extends Thread {
 
         if(haveJoinedGame == false){
             String sendMessage = "You cannot exit the game if you have not yet joined it.";
-            sendingToOwnClientMessage(sendMessage);
+            sendingMessageToOwnClient(sendMessage);
             return;
         }
 
@@ -276,7 +336,7 @@ class ServerThread extends Thread {
                 this.haveJoinedGame = false;
                 server.removeFromActivePlayersList(this);
                 String sendMessage = "You have exited the game.";
-                sendingToOwnClientMessage(sendMessage);
+                sendingMessageToOwnClient(sendMessage);
                 String sendToEveryoneMessage = this.name + " has exited the game";
                 for(ServerThread player : server.getActivePlayersList()){
 
@@ -284,7 +344,7 @@ class ServerThread extends Thread {
                         continue;
                     }
 
-                    sendingMessage(player, sendToEveryoneMessage);
+                    sendingMessageToOneClient(player, sendToEveryoneMessage);
                 }
                 if(server.getHasGameStarted() == false) {
                     printGameMessagesToActivePlayers(server.getActivePlayerCount());
@@ -300,13 +360,13 @@ class ServerThread extends Thread {
 
         if(!haveJoinedGame){
             String sendMessage = "You need to first join the game to start it.";
-            sendingToOwnClientMessage(sendMessage);
+            sendingMessageToOwnClient(sendMessage);
             return;
         }
 
         if(server.getHasGameStarted()){
             String sendMessage = "The game has already started.";
-            sendingToOwnClientMessage(sendMessage);
+            sendingMessageToOwnClient(sendMessage);
             return;
         }
 
@@ -316,16 +376,26 @@ class ServerThread extends Thread {
         }
 
         server.startingGame();
-        String sendMessageToActivePlayers = "The game has started.";
-        sendingToAllActivePlayersMessages(sendMessageToActivePlayers);
-        String sendMessageToClients = "The game has started. You cannot join it anymore.";
+
+        sendingMessageToEveryone(server.getActivePlayersList(), "The game has started. You are playing now!\n" +
+                "To see the description of the cards, enter $help. ");
         for(ServerThread client : server.getServerThreadsList()){
 
             if(server.getActivePlayersList().contains(client)){
                 continue;
             }
-            sendingMessage(client, sendMessageToClients);
+            sendingMessageToOneClient(client, "The game has started. You cannot join it anymore.");
+
         }
+
+        for(ServerThread player : server.getActivePlayersList()){
+            String sendMessage = "Last time you went on a date was "
+                    + player.getDaysSinceLastDate()+" days ago!";
+            sendingMessageToOneClient(player, sendMessage);
+        }
+
+        server.getGame().startRound(this);
+
 
     }
 
@@ -337,24 +407,24 @@ class ServerThread extends Thread {
         switch (count) {
             case 0:
                 countMessage = "There needs to be at least two players to start the game.";
-                sendingToAllActivePlayersMessages(countMessage);
+                sendingMessageToEveryone(server.getActivePlayersList(), countMessage);
                 break;
 
             case 1:
                 countMessage = "Waiting for at least one more player to start the game.";
-                sendingToAllActivePlayersMessages(countMessage);
+                sendingMessageToEveryone(server.getActivePlayersList(), countMessage);
                 break;
             case 2:
-                countMessage = "You can start the game now by typing $startGame or wait for one or two more people to join.";
-                sendingToAllActivePlayersMessages(countMessage);
+                countMessage = "You can start the game now by typing $startGame or wait for one or two more players to join.";
+                sendingMessageToEveryone(server.getActivePlayersList(), countMessage);
                 break;
             case 3:
-                countMessage = "You can start the game now by typing $startGame or wait for one more person to join.";
-                sendingToAllActivePlayersMessages(countMessage);
+                countMessage = "You can start the game now by typing $startGame or wait for one more player to join.";
+                sendingMessageToEveryone(server.getActivePlayersList(), countMessage);
                 break;
             case 4:
                 countMessage = "You can start the game now by typing $startGame.";
-                sendingToAllActivePlayersMessages(countMessage);
+                sendingMessageToEveryone(server.getActivePlayersList(), countMessage);
                 break;
             default:
                 // Do nothing
