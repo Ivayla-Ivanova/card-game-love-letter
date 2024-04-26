@@ -37,32 +37,72 @@ public class Game {
 
     public static void knockOutOfRound(ServerThread player) {
         // Discard hand
-        player.setIsInRound(false);
+        player.getPlayer().setIsInRound(false);
     }
 
     public void takeTurn(ServerThread player) {
-        player.setIsOnTurn(true);
-        player.getHand().addToHand(deck.drawCard());
+        player.getPlayer().setIsOnTurn(true);
+        player.getPlayer().setHasPlayedCard(false);
+        player.getPlayer().getHand().addToHand(deck.drawCard());
+        player.sendingMessageToOwnClient("You drew a card.");
+        player.sendingToAllPlayersExceptMe(player.getName() + " drew a card.");
+        player.sendingMessageToOwnClient(player.getPlayer().getHand().toString());
+        player.sendingMessageToOwnClient("Which card do you want to discard? Type $card1 or $card2.");
+        /*while(player.getPlayer().getHasPlayedCard() == false){
+            playCard(player);
+        }
+*/
 
     }
+/*
+    public void playCard(ServerThread player){
+
+        if(player.getReceivedCard() == "card1"){
+            try {
+                discardCard(player, player.getHand().getCard1());
+                player.setHasPlayedCard(true);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        if(player.getReceivedCard() == "card2"){
+            try {
+                discardCard(player, player.getHand().getCard2());
+                player.setHasPlayedCard(true);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+
+    }
+
+ */
+
+    public void  discardCard(ServerThread player, Card card) throws IOException {
+
+        player.getPlayer().getHand().removeFromHand(card);
+        // add to discardPile
+        player.sendingMessageToOwnClient("You discarded " + card.toString() + ".");
+        player.sendingToAllPlayersExceptMe(player.getName() +" discarded " + card.toString());
+        player.sendingMessageToOwnClient(player.getPlayer().getHand().toString());
+        card.applyCardEffect(player);
+        player.getPlayer().setIsOnTurn(false);
+
+    }
+
+
 
     public void takeInitialTurn(ServerThread player) {
 
-        player.setIsOnTurn(true);
-        player.getHand().addToHand(deck.drawCard());
+        player.getPlayer().setIsOnTurn(true);
+        player.getPlayer().getHand().addToHand(deck.drawCard());
         player.sendingMessageToOwnClient("You drew a card.");
         player.sendingToAllPlayersExceptMe(player.getName() + " drew a card.");
-        player.sendingMessageToOwnClient(player.getHand().toString());
-        player.setIsOnTurn((false));
+        player.sendingMessageToOwnClient(player.getPlayer().getHand().toString());
+        player.getPlayer().setIsOnTurn(false);
     }
 
-    public void discardCard(ServerThread player, Card card) throws IOException {
-
-        player.getHand().removeFromHand(card);
-        card.applyCardEffect(player);
-        player.setIsOnTurn(false);
-
-    }
 
     public void startRound(ServerThread player) {
 
@@ -76,54 +116,69 @@ public class Game {
             player.sendingMessageToEveryone(server.getActivePlayersList(), gameMessageForTwoPlayers);
         }
 
-        int minDaysSinceLastDate = 400;
-        for (ServerThread client : server.getActivePlayersList()) {
+        ServerThread initialPlayer;
+        initialPlayer = getInitialPlayer();
+        this.resortedListOfActivePlayers = reSortListOfActivePlayers(initialPlayer);
 
-            if (client.getDaysSinceLastDate() < minDaysSinceLastDate) {
-                minDaysSinceLastDate = client.getDaysSinceLastDate();
-            }
+        for(int i = 0; i < this.resortedListOfActivePlayers.size(); i++){
+            takeInitialTurn(resortedListOfActivePlayers.get(i));
         }
 
-            for (ServerThread initialPlayer : server.getActivePlayersList()) {
-
-                if (initialPlayer.getWonLastRound()) {
-                    initialPlayer.sendingMessageToOwnClient("You won in the last round. Now it's your turn to go first in this round.");
-                    initialPlayer.sendingToAllPlayersExceptMe(initialPlayer.getName() + " won the last round. Now " + initialPlayer.getName() + " goes first.");
-                    takeInitialTurn(initialPlayer);
-                    return;
-
-                }
-
-                if (initialPlayer.getDaysSinceLastDate() == minDaysSinceLastDate) {
-
-
-                    initialPlayer.sendingMessageToOwnClient("You had recently a date. Now it's your turn to go first in this round.");
-                    initialPlayer.sendingToAllPlayersExceptMe(initialPlayer.getName() + " hat recently a date. Now " + initialPlayer.getName() + " goes first.");
-                    takeInitialTurn(initialPlayer);
-                    reSortListOfActivePlayers(initialPlayer);
-                    return;
-
-
-                }
-
-
-            }
-
+        for(int i = 0; i < this.resortedListOfActivePlayers.size(); i++){
+            takeTurn(resortedListOfActivePlayers.get(i));
+        }
 
         }
 
-        private void reSortListOfActivePlayers(ServerThread initialPlayer){
+        private List<ServerThread> reSortListOfActivePlayers(ServerThread initialPlayer){
 
             List<ServerThread> firstSubList =
                     server.getActivePlayersList().subList(server.getActivePlayersList().indexOf(initialPlayer), server.getActivePlayersList().size());
             List<ServerThread> secondSubList = server.getActivePlayersList().subList(0, server.getActivePlayersList().indexOf(initialPlayer));
             firstSubList.addAll(secondSubList);
-            this.resortedListOfActivePlayers = firstSubList;
+            return firstSubList;
+
+        }
+
+        private ServerThread getInitialPlayer(){
+
+            for (ServerThread initialPlayer : server.getActivePlayersList()) {
+
+                if (initialPlayer.getPlayer().getWonLastRound()) {
+                    initialPlayer.sendingMessageToOwnClient("You won in the last round. Now it's your turn to go first in this round.");
+                    initialPlayer.sendingToAllPlayersExceptMe(initialPlayer.getName() + " won the last round. Now " + initialPlayer.getName() + " goes first.");
+                    return initialPlayer;
+
+                }
+
+                if (initialPlayer.getPlayer().getDaysSinceLastDate() == getLowestDaysSinceDate()) {
 
 
-            /*for (int pl = 1; pl < firstSubList.size(); pl++) {
-                takeInitialTurn(firstSubList.get(pl));
-            } */
+                    initialPlayer.sendingMessageToOwnClient("You had recently a date. Now it's your turn to go first in this round.");
+                    initialPlayer.sendingToAllPlayersExceptMe(initialPlayer.getName() + " had recently a date. Now " + initialPlayer.getName() + " goes first.");
+                    return initialPlayer;
+
+
+                }
+
+
+            }
+
+            return null;
+
+        }
+
+        private int getLowestDaysSinceDate(){
+
+            int minDaysSinceLastDate = 400;
+            for (ServerThread client : server.getActivePlayersList()) {
+
+                if (client.getPlayer().getDaysSinceLastDate() < minDaysSinceLastDate) {
+                    minDaysSinceLastDate = client.getPlayer().getDaysSinceLastDate();
+                }
+            }
+
+            return minDaysSinceLastDate;
 
         }
 }

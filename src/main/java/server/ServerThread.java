@@ -24,68 +24,21 @@ public class ServerThread extends Thread {
     private String name;
 
     private boolean haveJoinedGame;
+    private PlayerThread player;
 
-    //Player attributes
-
-    private Hand hand;
-    private ArrayList<Card> discardPile;
-    private int tokens;
-    private boolean isInRound;
-    private boolean wonLastRound;
-    private boolean isOnTurn;
-    private Card playedCard;
-    private int daysSinceLastDate;
-
-    private static Random randomGenerator = new Random();
 
     public ServerThread(Server server, Socket clientSocket) throws IOException {
         this.server = server;
         this.clientSocket = clientSocket;
         this.output = new PrintWriter(clientSocket.getOutputStream(), true);
         this.input = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+        this.player = null;
 
         // A Thread cannot start executing before entering a valid name
         this.name = enteringName();
         this.haveJoinedGame = false;
 
-        //Player
-        resetPlayerAttributes();
 
-
-    }
-
-    //Player methods
-    public void setIsInRound(boolean value){
-        this.isInRound = value;
-    }
-
-    public void resetPlayerAttributes(){
-
-        this.hand = new Hand();
-        this.discardPile = new ArrayList<>();
-        this.tokens = 0;
-        this.isInRound = false;
-        this.wonLastRound = false;
-        this.isOnTurn = false;
-        this.playedCard = null;
-        this.daysSinceLastDate = randomGenerator.nextInt(366);
-
-    }
-
-    public int getDaysSinceLastDate(){
-        return this.daysSinceLastDate;
-    }
-
-    public boolean getWonLastRound(){
-        return this.wonLastRound;
-    }
-
-    public void setIsOnTurn(boolean value){
-        this.isOnTurn = value;
-    }
-
-    public Hand getHand(){
-        return this.hand;
     }
 
     @Override
@@ -140,7 +93,15 @@ public class ServerThread extends Thread {
         }
     }
 
-    private void sendingMessageToOneClient(ServerThread client, String message){
+    public PlayerThread getPlayer(){
+        return this.player;
+    }
+
+    public void setPlayer(PlayerThread player){
+        this.player = player;
+    }
+
+    public void sendingMessageToOneClient(ServerThread client, String message){
 
         client.output.println(message);
     }
@@ -198,7 +159,7 @@ public class ServerThread extends Thread {
 
     }
 
-    private void sendingGameMessage(String receivedMessage){
+    public void sendingGameMessage(String receivedMessage){
 
         if(receivedMessage.substring(1).equals("joinGame")){
 
@@ -216,6 +177,14 @@ public class ServerThread extends Thread {
 
             printCardDescription();
 
+        } else if(receivedMessage.substring(1).equals("card1")){
+
+            //this.receivedCard = "card1";
+
+        } else if(receivedMessage.substring(1).equals("card2")){
+
+            //this.receivedCard = "card2";
+
         }else {
 
             String sendMessage = "You have entered an invalid game command. Please try again.";
@@ -223,6 +192,8 @@ public class ServerThread extends Thread {
         }
 
     }
+
+
     public void sendingToAllPlayersExceptMe(String message){
 
         for (ServerThread client : server.getActivePlayersList()) {
@@ -388,25 +359,10 @@ public class ServerThread extends Thread {
         }
 
         server.startingGame();
-
-        sendingMessageToEveryone(server.getActivePlayersList(), "The game has started. You are playing now!\n" +
-                "To see the description of the cards, enter $help. ");
-        for(ServerThread client : server.getServerThreadsList()){
-
-            if(server.getActivePlayersList().contains(client)){
-                continue;
-            }
-            sendingMessageToOneClient(client, "The game has started. You cannot join it anymore.");
-
+        for(ServerThread client : server.getActivePlayersList()) {
+            client.setPlayer(new PlayerThread(client, server));
         }
-
-        for(ServerThread player : server.getActivePlayersList()){
-            String sendMessage = "Last time you went on a date was "
-                    + player.getDaysSinceLastDate()+" days ago!";
-            sendingMessageToOneClient(player, sendMessage);
-        }
-
-        server.getGame().startRound(this);
+        this.player.start();
 
 
     }
