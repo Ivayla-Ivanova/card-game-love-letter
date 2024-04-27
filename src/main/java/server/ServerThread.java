@@ -136,14 +136,13 @@ public class ServerThread extends Thread {
 
             player.setReceivedCard("card1");
             System.out.println("Gespielte Karte: " + player.getReceivedCard());
-            player.setHasPlayedCard(true);
             server.getGame().playCard(this);
+            server.getGame().takeTurn(server.getActivePlayersList().get(server.getActivePlayersList().indexOf(this) +1));
 
         } else if(receivedMessage.substring(1).equals("card2")){
 
             player.setReceivedCard("card2");
             System.out.println("Gespielte Karte: " + player.getReceivedCard());
-            player.setHasPlayedCard(true);
             server.getGame().playCard(this);
 
 

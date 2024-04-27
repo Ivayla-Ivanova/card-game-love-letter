@@ -14,7 +14,7 @@ public class Game {
     private final Server server;
 
     private Deck deck;
-    private List<ServerThread> resortedListOfActivePlayers;
+    private ArrayList<ServerThread> resortedListOfActivePlayers;
 
 
     private Game(Server server) {
@@ -41,10 +41,9 @@ public class Game {
     }
 
     public void takeTurn(ServerThread player) {
-        player.getPlayer().setHasPlayedCard(false);
+
         player.getPlayer().getHand().addToHand(deck.drawCard());
         server.sendMessageToOneClient(player, "You drew a card.");
-        System.out.println("Liste der aktiven Spieler: " + server.getActivePlayersList());
         server.sendMessageToAllActivePlayersExceptOne(player,player.getName() + " drew a card.");
         server.sendMessageToOneClient(player, player.getPlayer().getHand().toString());
         server.sendMessageToOneClient(player, "Which card do you want to discard? Type $card1 or $card2.");
@@ -105,14 +104,15 @@ public class Game {
         initialPlayer = getInitialPlayer();
         reSortListOfActivePlayers(initialPlayer);
 
-        for(int i = 0; i < this.resortedListOfActivePlayers.size(); i++){
+        for (int i = 0; i < this.resortedListOfActivePlayers.size(); i++) {
             takeInitialTurn(resortedListOfActivePlayers.get(i));
         }
 
         takeTurn(initialPlayer);
 
 
-        }
+
+    }
 
         //--------FullyImplementedAndWorkingMethods-----------------------
 

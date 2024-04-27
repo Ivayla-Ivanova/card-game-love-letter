@@ -13,7 +13,7 @@ public class Server {
     private ArrayList<ServerThread> serverThreads;
     private ServerSocket serverSocket;
     private Set<String> names;
-    private List<ServerThread> activePlayersList;
+    private ArrayList<ServerThread> activePlayersList;
     private Map<ServerThread, PrintWriter> mapOfServerThreads;
 
     private int activePlayerCount;
@@ -86,7 +86,7 @@ public class Server {
     public synchronized Game getGame(){
         return this.game;
     }
-    public synchronized void setActivePlayersList(List<ServerThread> activePlayers){
+    public synchronized void setActivePlayersList(ArrayList<ServerThread> activePlayers){
         this.activePlayersList = activePlayers;
     }
 

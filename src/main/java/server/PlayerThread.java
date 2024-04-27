@@ -38,6 +38,13 @@ public class PlayerThread extends Thread{
 
         while (true){
 
+            /*
+            if(this.isOnTurn == true){
+                server.getGame().takeTurn(serverThread);
+            }
+
+             */
+
         }
 
     }
