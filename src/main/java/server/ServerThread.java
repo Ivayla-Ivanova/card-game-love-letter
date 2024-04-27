@@ -22,9 +22,21 @@ public class ServerThread extends Thread {
     private Server server;
 
     private String name;
-
     private boolean hasJoinedGame;
-    private PlayerThread player;
+
+    //Player attributes
+    private Hand hand;
+    private ArrayList<Card> discardPile;
+    private int tokens;
+    private boolean isInRound;
+    private boolean wonLastRound;
+    private boolean isOnTurn;
+    private Card playedCard;
+    private int daysSinceLastDate;
+    private String receivedCard;
+
+    private boolean hasPlayedCard;
+    private static Random randomGenerator = new Random();
 
 //--------------------------------------------------------------------------------------------------------
     public ServerThread(Server server, Socket clientSocket) throws IOException {
@@ -32,12 +44,26 @@ public class ServerThread extends Thread {
         this.clientSocket = clientSocket;
         this.output = new PrintWriter(clientSocket.getOutputStream(), true);
         this.input = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-        this.player = null;
-
-        // A Thread cannot start executing before entering a valid name
         this.name = enteringName(input, output);
         this.hasJoinedGame = false;
         server.addToMap(this);
+
+        resetPlayerAttributes();
+
+    }
+
+    public void resetPlayerAttributes(){
+
+        this.hand = new Hand();
+        this.discardPile = new ArrayList<>();
+        this.tokens = 0;
+        this.isInRound = false;
+        this.wonLastRound = false;
+        this.isOnTurn = false;
+        this.playedCard = null;
+        this.daysSinceLastDate = randomGenerator.nextInt(366);
+        this.receivedCard = null;
+        this.hasPlayedCard = false;
 
     }
 
@@ -105,13 +131,43 @@ public class ServerThread extends Thread {
         this.hasJoinedGame = value;
     }
 
-    public PlayerThread getPlayer(){
-        return this.player;
+    public boolean getIsInRound(){
+        return this.isInRound;
+    }
+    public void setIsInRound(boolean value){
+        this.isInRound = value;
+    }
+    public boolean getHasPlayedCard(){
+        return this.hasPlayedCard;
+    }
+    public void setHasPlayedCard(boolean value){
+        this.hasPlayedCard = value;
     }
 
-    public void setPlayer(PlayerThread player){
-        this.player = player;
+    public String getReceivedCard(){
+        return this.receivedCard;
     }
+
+    public void setReceivedCard(String value){
+        this.receivedCard = value;
+    }
+
+    public int getDaysSinceLastDate(){
+        return this.daysSinceLastDate;
+    }
+
+    public boolean getWonLastRound(){
+        return this.wonLastRound;
+    }
+
+    public void setIsOnTurn(boolean value){
+        this.isOnTurn = value;
+    }
+
+    public Hand getHand(){
+        return this.hand;
+    }
+
 
 //----------------------------------------------------------------------------------------------------------
     public void sendingGameMessage(String receivedMessage){
@@ -134,16 +190,23 @@ public class ServerThread extends Thread {
 
         } else if(receivedMessage.substring(1).equals("card1")){
 
-            player.setReceivedCard("card1");
-            System.out.println("Gespielte Karte: " + player.getReceivedCard());
+            this.receivedCard = "card1";
             server.getGame().playCard(this);
-            server.getGame().takeTurn(server.getActivePlayersList().get(server.getActivePlayersList().indexOf(this) +1));
+            if(!server.getGame().getDeck().IsDeckEmpty()) {
+                server.getGame().takeTurn(server.getActivePlayersList().get((server.getActivePlayersList().indexOf(this) + 1) % server.getActivePlayersList().size()));
+            }else{
+                server.getGame().endRound();
+            }
 
         } else if(receivedMessage.substring(1).equals("card2")){
 
-            player.setReceivedCard("card2");
-            System.out.println("Gespielte Karte: " + player.getReceivedCard());
+            this.receivedCard = "card2";
             server.getGame().playCard(this);
+            if(!server.getGame().getDeck().IsDeckEmpty()) {
+                server.getGame().takeTurn(server.getActivePlayersList().get((server.getActivePlayersList().indexOf(this) + 1) % server.getActivePlayersList().size()));
+            } else{
+                server.getGame().endRound();
+            }
 
 
         }else {
@@ -195,8 +258,6 @@ public class ServerThread extends Thread {
 
         return name;
     }
-
-
 
     private void printCardDescription() {
         String description = """ 

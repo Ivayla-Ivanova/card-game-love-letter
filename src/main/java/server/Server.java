@@ -86,6 +86,9 @@ public class Server {
     public synchronized Game getGame(){
         return this.game;
     }
+    public synchronized ArrayList<ServerThread> getActivePlayerList(){
+        return this.activePlayersList;
+    }
     public synchronized void setActivePlayersList(ArrayList<ServerThread> activePlayers){
         this.activePlayersList = activePlayers;
     }
@@ -210,7 +213,6 @@ public class Server {
         return true;
 
     }
-
     public synchronized boolean decreaseActivePlayerCount(ServerThread client) throws InterruptedException {
 
         if(this.activePlayerCount - 1 < 0){
@@ -225,11 +227,22 @@ public class Server {
         return true;
 
     }
+    public synchronized void modifyActivePlayerList(ArrayList<ServerThread> list){
+
+        if(list == null || list.isEmpty()){
+            System.out.println("activePlayersList remains unmodified.");
+            return;
+        }
+        this.activePlayersList.clear();
+        this.activePlayersList.addAll(list);
+
+    }
+
 
     //---------GameRelatedMethods-----------------------------------------------------
     public synchronized void createGame(){
 
-        this.game = Game.getInstance(this);
+        this.game = Game.getInstance(this, this.activePlayersList);
         this.hasGameStarted = true;
 
 
@@ -290,10 +303,7 @@ public class Server {
         }
 
         createGame();
-        for(ServerThread client : activePlayersList) {
-            client.setPlayer(new PlayerThread(client, this));
-            client.getPlayer().start();
-        }
+
         sendMessageToAllActivePlayers("The game has started. You are playing now!\n" +
                                              "To see the description of the cards, enter $help. ");
 
@@ -301,7 +311,7 @@ public class Server {
 
         for(ServerThread player : this.activePlayersList){
             String sendMessage = "Last time you went on a date was "
-                                 + player.getPlayer().getDaysSinceLastDate()+" days ago!";
+                                 + player.getDaysSinceLastDate()+" days ago!";
             sendMessageToOneClient(player, sendMessage);
         }
 

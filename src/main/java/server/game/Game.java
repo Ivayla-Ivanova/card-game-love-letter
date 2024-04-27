@@ -14,19 +14,20 @@ public class Game {
     private final Server server;
 
     private Deck deck;
-    private ArrayList<ServerThread> resortedListOfActivePlayers;
+    private ArrayList<ServerThread> listOfActivePlayers;
 
 
-    private Game(Server server) {
+    private Game(Server server, ArrayList<ServerThread> activePlayers) {
 
         this.server = server;
         this.deck = Deck.getInstance(this);
-        this.resortedListOfActivePlayers = new ArrayList<>();
+        this.listOfActivePlayers = activePlayers;
+
     }
 
-    public static synchronized Game getInstance(Server server) {
+    public static synchronized Game getInstance(Server server, ArrayList<ServerThread> activePlayers) {
         if (instance == null)
-            instance = new Game(server);
+            instance = new Game(server, activePlayers);
 
         return instance;
     }
@@ -35,17 +36,21 @@ public class Game {
         return this.server;
     }
 
+    public Deck getDeck(){
+        return this.deck;
+    }
+
     public static void knockOutOfRound(ServerThread player) {
         // Discard hand
-        player.getPlayer().setIsInRound(false);
+        player.setIsInRound(false);
     }
 
     public void takeTurn(ServerThread player) {
 
-        player.getPlayer().getHand().addToHand(deck.drawCard());
+        player.getHand().addToHand(deck.drawCard());
         server.sendMessageToOneClient(player, "You drew a card.");
         server.sendMessageToAllActivePlayersExceptOne(player,player.getName() + " drew a card.");
-        server.sendMessageToOneClient(player, player.getPlayer().getHand().toString());
+        server.sendMessageToOneClient(player, player.getHand().toString());
         server.sendMessageToOneClient(player, "Which card do you want to discard? Type $card1 or $card2.");
 
 
@@ -53,16 +58,16 @@ public class Game {
 
     public void playCard(ServerThread player){
 
-        if(player.getPlayer().getReceivedCard() == "card1"){
+        if(player.getReceivedCard() == "card1"){
             try {
-                discardCard(player, player.getPlayer().getHand().getCard1());
+                discardCard(player, player.getHand().getCard1());
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
-        if(player.getPlayer().getReceivedCard() == "card2"){
+        if(player.getReceivedCard() == "card2"){
             try {
-                discardCard(player, player.getPlayer().getHand().getCard2());
+                discardCard(player, player.getHand().getCard2());
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -74,13 +79,33 @@ public class Game {
 
     public void  discardCard(ServerThread player, Card card) throws IOException {
 
-        player.getPlayer().getHand().removeFromHand(card);
+        player.getHand().removeFromHand(card);
         // add to discardPile
         server.sendMessageToOneClient(player, "You discarded " + card.toString() + ".");
         server.sendMessageToAllActivePlayersExceptOne(player, player.getName() +" discarded " + card.toString());
-        server.sendMessageToOneClient(player, player.getPlayer().getHand().toString());
+        server.sendMessageToOneClient(player, player.getHand().toString());
         //card.applyCardEffect(player);
 
+    }
+
+    public void endRound(){
+
+        for(ServerThread player : this.listOfActivePlayers){
+
+            if(player.getIsInRound() == true) {
+
+                server.sendMessageToOneClient(player, "The round has ended. Please reveal your hand!");
+            }
+            if(player.getIsInRound() == false){
+
+                server.sendMessageToOneClient(player, "The round has ended. All hands will be revealed.");
+            }
+        }
+
+        for(ServerThread player : this.listOfActivePlayers){
+            server.sendMessageToOneClient(player,"Your " + player.getHand().toString()+ ".");
+            server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + "'s " + player.getHand().toString()+".");
+        }
     }
 
 
@@ -104,8 +129,8 @@ public class Game {
         initialPlayer = getInitialPlayer();
         reSortListOfActivePlayers(initialPlayer);
 
-        for (int i = 0; i < this.resortedListOfActivePlayers.size(); i++) {
-            takeInitialTurn(resortedListOfActivePlayers.get(i));
+        for (int i = 0; i < this.listOfActivePlayers.size(); i++) {
+            takeInitialTurn(this.listOfActivePlayers.get(i));
         }
 
         takeTurn(initialPlayer);
@@ -118,27 +143,28 @@ public class Game {
 
         public void takeInitialTurn(ServerThread player) {
 
-        player.getPlayer().getHand().addToHand(deck.drawCard());
+        player.getHand().addToHand(deck.drawCard());
         server.sendMessageToOneClient(player, "You drew a card.");
         server.sendMessageToAllActivePlayersExceptOne(player,player.getName() + " drew a card.");
-        server.sendMessageToOneClient(player, player.getPlayer().getHand().toString());
+        server.sendMessageToOneClient(player, player.getHand().toString());
     }
         private void reSortListOfActivePlayers(ServerThread initialPlayer){
 
             List<ServerThread> firstSubList =
-                    server.getActivePlayersList().subList(server.getActivePlayersList().indexOf(initialPlayer), server.getActivePlayersList().size());
-            List<ServerThread> secondSubList = server.getActivePlayersList().subList(0, server.getActivePlayersList().indexOf(initialPlayer));
+                    this.listOfActivePlayers.subList(this.listOfActivePlayers.indexOf(initialPlayer), this.listOfActivePlayers.size());
+            List<ServerThread> secondSubList = this.listOfActivePlayers.subList(0, this.listOfActivePlayers.indexOf(initialPlayer));
             firstSubList.addAll(secondSubList);
-            System.out.println("ResortedList: " + firstSubList);
-            this.resortedListOfActivePlayers.addAll(firstSubList);
-            server.setActivePlayersList(this.resortedListOfActivePlayers);
+            ArrayList<ServerThread> temp = new ArrayList<>();
+            temp.addAll(firstSubList);
+            server.modifyActivePlayerList(temp);
+
 
         }
         private ServerThread getInitialPlayer(){
 
             for (ServerThread initialPlayer : server.getActivePlayersList()) {
 
-                if (initialPlayer.getPlayer().getWonLastRound()) {
+                if (initialPlayer.getWonLastRound()) {
 
                     server.sendMessageToOneClient(initialPlayer, "You won in the last round. Now it's your turn to go first in this round.");
                     server.sendMessageToAllActivePlayersExceptOne(initialPlayer, initialPlayer.getName() + " won the last round. Now " + initialPlayer.getName() + " goes first.");
@@ -146,7 +172,7 @@ public class Game {
 
                 }
 
-                if (initialPlayer.getPlayer().getDaysSinceLastDate() == getLowestDaysSinceDate()) {
+                if (initialPlayer.getDaysSinceLastDate() == getLowestDaysSinceDate()) {
 
                     server.sendMessageToOneClient(initialPlayer, "You had recently a date. Now it's your turn to go first in this round.");
                     server.sendMessageToAllActivePlayersExceptOne(initialPlayer, initialPlayer.getName() + " had recently a date. Now " + initialPlayer.getName() + " goes first.");
@@ -167,8 +193,8 @@ public class Game {
             int minDaysSinceLastDate = 400;
             for (ServerThread client : server.getActivePlayersList()) {
 
-                if (client.getPlayer().getDaysSinceLastDate() < minDaysSinceLastDate) {
-                    minDaysSinceLastDate = client.getPlayer().getDaysSinceLastDate();
+                if (client.getDaysSinceLastDate() < minDaysSinceLastDate) {
+                    minDaysSinceLastDate = client.getDaysSinceLastDate();
                 }
             }
 

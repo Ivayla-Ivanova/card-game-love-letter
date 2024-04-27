@@ -11,18 +11,7 @@ public class PlayerThread extends Thread{
     private String name;
     private ServerThread serverThread;
     private Server server;
-    private Hand hand;
-    private ArrayList<Card> discardPile;
-    private int tokens;
-    private boolean isInRound;
-    private boolean wonLastRound;
-    private boolean isOnTurn;
-    private Card playedCard;
-    private int daysSinceLastDate;
-    private String receivedCard;
 
-    private boolean hasPlayedCard;
-    private static Random randomGenerator = new Random();
 
     public PlayerThread(ServerThread serverThread, Server server){
 
@@ -31,7 +20,7 @@ public class PlayerThread extends Thread{
         this.server = server;
 
 
-        resetPlayerAttributes();
+
     }
 
     public void run(){
@@ -49,51 +38,6 @@ public class PlayerThread extends Thread{
 
     }
 
-    public void resetPlayerAttributes(){
 
-        this.hand = new Hand();
-        this.discardPile = new ArrayList<>();
-        this.tokens = 0;
-        this.isInRound = false;
-        this.wonLastRound = false;
-        this.isOnTurn = false;
-        this.playedCard = null;
-        this.daysSinceLastDate = randomGenerator.nextInt(366);
-        this.receivedCard = null;
-        this.hasPlayedCard = false;
 
-    }
-    public void setIsInRound(boolean value){
-        this.isInRound = value;
-    }
-    public boolean getHasPlayedCard(){
-        return this.hasPlayedCard;
-    }
-    public void setHasPlayedCard(boolean value){
-        this.hasPlayedCard = value;
-    }
-
-    public String getReceivedCard(){
-        return this.receivedCard;
-    }
-
-    public void setReceivedCard(String value){
-        this.receivedCard = value;
-    }
-
-    public int getDaysSinceLastDate(){
-        return this.daysSinceLastDate;
-    }
-
-    public boolean getWonLastRound(){
-        return this.wonLastRound;
-    }
-
-    public void setIsOnTurn(boolean value){
-        this.isOnTurn = value;
-    }
-
-    public Hand getHand(){
-        return this.hand;
-    }
 }
