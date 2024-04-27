@@ -172,6 +172,44 @@ public class ServerThread extends Thread {
         return this.hand;
     }
 
+    public void addToken(){
+        int newTokens = this.tokens + 1;
+        this.tokens = newTokens;
+    }
+
+    public int getToken(){
+        return this.tokens;
+    }
+
+    public void addToDiscardPile(Card card){
+        this.discardPile.add(card);
+
+    }
+
+    public void clearDiscardPile(){
+        this.discardPile.clear();
+    }
+
+    public String getDiscardPileRepresentation(){
+
+        StringBuilder printDiscardPile = new StringBuilder("Discard Pile: [");
+
+        for(int i = 0; i < this.discardPile.size() - 1; i++){
+            printDiscardPile.append(this.discardPile.get(i).toString() + ", ");
+        }
+        printDiscardPile.append(discardPile.get(discardPile.size()- 1).toString() + "]");
+
+        return String.valueOf(printDiscardPile);
+    }
+
+    public int getScoreOfDiscardPile(){
+        int score = 0;
+        for(Card card : this.discardPile){
+            score = score + card.getCardNumber();
+        }
+        return score;
+    }
+
 
 //----------------------------------------------------------------------------------------------------------
     public void sendingGameMessage(String receivedMessage){

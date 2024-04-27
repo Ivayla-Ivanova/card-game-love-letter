@@ -15,6 +15,8 @@ public class Game {
 
     private Deck deck;
     private ArrayList<ServerThread> listOfActivePlayers;
+    private int initialCountOfActivePlayers;
+    private int numberOfTokensToWin;
 
 
     private Game(Server server, ArrayList<ServerThread> activePlayers) {
@@ -22,6 +24,17 @@ public class Game {
         this.server = server;
         this.deck = Deck.getInstance(this);
         this.listOfActivePlayers = activePlayers;
+        this.initialCountOfActivePlayers = activePlayers.size();
+        if(activePlayers.size() == 2){
+            this.numberOfTokensToWin = 7;
+        }
+        if(activePlayers.size() == 3){
+            this.numberOfTokensToWin = 5;
+        }
+
+        if(activePlayers.size() == 4){
+            this.numberOfTokensToWin = 4;
+        }
 
     }
 
@@ -95,9 +108,11 @@ public class Game {
     public void  discardCard(ServerThread player, Card card) throws IOException {
 
         player.getHand().removeFromHand(card);
-        // add to discardPile
+        player.addToDiscardPile(card);
         server.sendMessageToOneClient(player, "You discarded " + card.toString() + ".");
+        server.sendMessageToOneClient(player, "Your " + player.getDiscardPileRepresentation());
         server.sendMessageToAllActivePlayersExceptOne(player, player.getName() +" discarded " + card.toString());
+        server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + "'s " + player.getDiscardPileRepresentation());
         server.sendMessageToOneClient(player, player.getHand().toString());
         //card.applyCardEffect(player);
 
@@ -123,9 +138,11 @@ public class Game {
         }
 
         getRoundWinner();
-
-
-
+        for(ServerThread player : this.listOfActivePlayers) {
+            server.sendMessageToOneClient(player, "You have " + player.getToken() + " token(s).");
+            server.sendMessageToAllActivePlayersExceptOne(player,player.getName() + " has " + player.getToken() + " token(s).");
+            player.clearDiscardPile();
+        }
     }
 
     public void getRoundWinner(){
@@ -155,23 +172,53 @@ public class Game {
             }
         }
 
-        System.out.println("Number of winners: " + countOfHighestScore);
-        System.out.println("Winners: " + winners);
+       // System.out.println("Number of winners: " + countOfHighestScore);
+       // System.out.println("Winners: " + winners);
 
         if(countOfHighestScore > 1){
-            server.sendMessageToAllActivePlayers("There is a tie!");
+            server.sendMessageToAllActivePlayers("There is a tie! The sum of players' " +
+                                                 "hand scores and discard pile scores will decide the winner.");
+            for(ServerThread winner : winners){
+                int score = 0;
+                score = score + winner.getScoreOfDiscardPile() + winner.getHand().getHandScore();
+                if(score > highestScore){
+                    highestScore = score;
+                }
+            }
+            countOfHighestScore = 0;
+            winners.clear();
+
+            for(ServerThread player : this.listOfActivePlayers){
+                if(player.getIsInRound() == true && player.getHand().getHandScore() + player.getScoreOfDiscardPile() == highestScore){
+                    countOfHighestScore = countOfHighestScore + 1;
+                    winners.add(player);
+                }
+            }
+
+            if(countOfHighestScore > 1){
+                StringBuilder message = new StringBuilder("The winners in this round are ");
+                for(int i = 0; i < winners.size() - 1; i++){
+                    message.append(winners.get(i).getName() + ", ");
+                }
+                message.append(winners.getLast().getName());
+                for(ServerThread winner : winners){
+                    winner.addToken();
+                }
+                server.sendMessageToAllActivePlayers(String.valueOf(message));
+                return;
+
+            }
+            winners.getFirst().addToken();
+            server.sendMessageToAllActivePlayers("The winner of this round is: " + winners.getFirst().getName());
+            return;
         }
 
+        winners.getFirst().addToken();
         server.sendMessageToAllActivePlayers("The winner of this round is: " + winners.getFirst().getName());
 
 
 
     }
-
-
-
-
-
 
     public void startRound(ServerThread player) {
 

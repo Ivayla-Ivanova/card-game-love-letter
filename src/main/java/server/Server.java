@@ -180,16 +180,14 @@ public class Server {
             Invalid name.
             Please send private messages by e.g. writing '@name message'!""";
             sendMessageToOneClient(from, sendMessage);
-
+            return;
         }
         if(temp[1].isBlank()){
             return;
         }
         String sendMessage = "[private] " + from.getName() + ": " + temp[1];
 
-
-
-        for (ServerThread client : serverThreads) {
+        for (ServerThread client : mapOfServerThreads.keySet()) {
 
             if (client.getName().equals(addresseeName)) {
                 sendMessageToOneClient(client, sendMessage);
@@ -240,14 +238,14 @@ public class Server {
 
 
     //---------GameRelatedMethods-----------------------------------------------------
-    public synchronized void createGame(){
+    private void createGame(){
 
         this.game = Game.getInstance(this, this.activePlayersList);
         this.hasGameStarted = true;
 
 
     }
-    public void joinGame(ServerThread serverThread){
+    public synchronized void joinGame(ServerThread serverThread){
 
         try {
 
@@ -283,7 +281,7 @@ public class Server {
 
     }
 
-    public void starGame(ServerThread serverThread){
+    public synchronized void starGame(ServerThread serverThread){
 
         if(!serverThread.getHasJoinedGame()){
             String sendMessage = "You need to first join the game to start it.";
@@ -323,7 +321,7 @@ public class Server {
 
     }
 
-    public void exitGame(ServerThread serverThread){
+    public  synchronized void exitGame(ServerThread serverThread){
 
         if(serverThread.getHasJoinedGame() == false){
             String sendMessage = "You cannot exit the game if you have not yet joined it.";
