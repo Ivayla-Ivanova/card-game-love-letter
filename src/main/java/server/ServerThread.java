@@ -164,6 +164,10 @@ public class ServerThread extends Thread {
         this.isOnTurn = value;
     }
 
+    public boolean getIsOnTurn(){
+        return this.isOnTurn;
+    }
+
     public Hand getHand(){
         return this.hand;
     }
@@ -190,22 +194,39 @@ public class ServerThread extends Thread {
 
         } else if(receivedMessage.substring(1).equals("card1")){
 
-            this.receivedCard = "card1";
-            server.getGame().playCard(this);
-            if(!server.getGame().getDeck().IsDeckEmpty()) {
-                server.getGame().takeTurn(server.getActivePlayersList().get((server.getActivePlayersList().indexOf(this) + 1) % server.getActivePlayersList().size()));
-            }else{
-                server.getGame().endRound();
+            if(!server.getActivePlayerList().contains(this)){
+                server.sendMessageToOneClient(this, "You cannot use this game command when you are not playing.");
+            } else if(this.isOnTurn ==false) {
+
+                server.sendMessageToOneClient(this, "It's not your turn! You cannot discard a card right now.");
+            }else {
+
+                this.receivedCard = "card1";
+                server.getGame().playCard(this);
+                if (!server.getGame().getDeck().IsDeckEmpty()) {
+                    server.getGame().takeTurn(server.getActivePlayersList().get((server.getActivePlayersList().indexOf(this) + 1) % server.getActivePlayersList().size()));
+                } else {
+                    server.getGame().endRound();
+                }
             }
 
         } else if(receivedMessage.substring(1).equals("card2")){
 
-            this.receivedCard = "card2";
-            server.getGame().playCard(this);
-            if(!server.getGame().getDeck().IsDeckEmpty()) {
-                server.getGame().takeTurn(server.getActivePlayersList().get((server.getActivePlayersList().indexOf(this) + 1) % server.getActivePlayersList().size()));
-            } else{
-                server.getGame().endRound();
+            if(!server.getActivePlayerList().contains(this)){
+                server.sendMessageToOneClient(this, "You cannot use this game command when you are not playing.");
+            } else if(this.isOnTurn ==false) {
+
+                server.sendMessageToOneClient(this, "It's not your turn! You cannot discard a card right now.");
+            }else{
+
+                this.receivedCard = "card2";
+
+                server.getGame().playCard(this);
+                if (!server.getGame().getDeck().IsDeckEmpty()) {
+                    server.getGame().takeTurn(server.getActivePlayersList().get((server.getActivePlayersList().indexOf(this) + 1) % server.getActivePlayersList().size()));
+                } else {
+                    server.getGame().endRound();
+                }
             }
 
 

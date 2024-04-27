@@ -47,6 +47,7 @@ public class Game {
 
     public void takeTurn(ServerThread player) {
 
+        player.setIsOnTurn(true);
         player.getHand().addToHand(deck.drawCard());
         server.sendMessageToOneClient(player, "You drew a card.");
         server.sendMessageToAllActivePlayersExceptOne(player,player.getName() + " drew a card.");
@@ -59,6 +60,12 @@ public class Game {
     public void playCard(ServerThread player){
 
         if(player.getReceivedCard() == "card1"){
+
+            if(player.getHand().getCard1() == null){
+                server.sendMessageToOneClient(player, "1.Card does not exist!");
+                return;
+            }
+
             try {
                 discardCard(player, player.getHand().getCard1());
             } catch (IOException e) {
@@ -66,12 +73,20 @@ public class Game {
             }
         }
         if(player.getReceivedCard() == "card2"){
+
+            if(player.getHand().getCard2() == null){
+                server.sendMessageToOneClient(player, "2.Card does not exist!");
+                return;
+            }
+
             try {
                 discardCard(player, player.getHand().getCard2());
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
+
+        player.setIsOnTurn(false);
 
 
     }
@@ -106,6 +121,51 @@ public class Game {
             server.sendMessageToOneClient(player,"Your " + player.getHand().toString()+ ".");
             server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + "'s " + player.getHand().toString()+".");
         }
+
+        getRoundWinner();
+
+
+
+    }
+
+    public void getRoundWinner(){
+
+        int highestScore = 0;
+        ArrayList<ServerThread> winners = new ArrayList<>();
+
+        for(ServerThread player : this.listOfActivePlayers){
+
+            if(player.getIsInRound() == true) {
+                if (player.getHand().getHandScore() > highestScore) {
+                    System.out.println(player.getName() + "'s HandScore: " + player.getHand().getHandScore());
+                    highestScore = player.getHand().getHandScore();
+                }
+            }
+        }
+
+        System.out.println("HighestScore: " + highestScore);
+
+        int countOfHighestScore = 0;
+
+        for(ServerThread player : this.listOfActivePlayers){
+
+            if(player.getIsInRound() == true && player.getHand().getHandScore() == highestScore){
+                countOfHighestScore = countOfHighestScore + 1;
+                winners.add(player);
+            }
+        }
+
+        System.out.println("Number of winners: " + countOfHighestScore);
+        System.out.println("Winners: " + winners);
+
+        if(countOfHighestScore > 1){
+            server.sendMessageToAllActivePlayers("There is a tie!");
+        }
+
+        server.sendMessageToAllActivePlayers("The winner of this round is: " + winners.getFirst().getName());
+
+
+
     }
 
 
@@ -116,6 +176,9 @@ public class Game {
     public void startRound(ServerThread player) {
 
         this.deck.setUp();
+        for(ServerThread activePlayer : this.listOfActivePlayers){
+            activePlayer.setIsInRound(true);
+        }
         String gameMessage = "The top card has been set aside.";
         server.sendMessageToAllActivePlayers(gameMessage);
 
@@ -143,10 +206,12 @@ public class Game {
 
         public void takeInitialTurn(ServerThread player) {
 
+        player.setIsOnTurn(true);
         player.getHand().addToHand(deck.drawCard());
         server.sendMessageToOneClient(player, "You drew a card.");
         server.sendMessageToAllActivePlayersExceptOne(player,player.getName() + " drew a card.");
         server.sendMessageToOneClient(player, player.getHand().toString());
+        player.setIsOnTurn(false);
     }
         private void reSortListOfActivePlayers(ServerThread initialPlayer){
 

@@ -28,6 +28,24 @@ public class Hand {
         this.card2 = card;
     }
 
+    public int getHandScore(){
+        int score;
+
+        if(this.card1 == null) {
+            score = this.card2.getCardNumber();
+            return score;
+        }
+
+        if(this.card2 == null) {
+            score = this.card1.getCardNumber();
+            return score;
+        }
+
+        score = this.card1.getCardNumber() + this.card2.getCardNumber();
+        return score;
+
+    }
+
     public void addToHand(Card card){
 
         if(this.card1 == null) {
@@ -57,7 +75,6 @@ public class Hand {
         }
 
         return "Hand - 1.Card: " + this.card1.toString() + " 2.Card: " + this.card2.toString();
-
 
     }
 }
