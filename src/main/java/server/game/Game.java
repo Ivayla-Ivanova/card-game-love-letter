@@ -44,6 +44,7 @@ public class Game {
         player.getPlayer().setHasPlayedCard(false);
         player.getPlayer().getHand().addToHand(deck.drawCard());
         server.sendMessageToOneClient(player, "You drew a card.");
+        System.out.println("Liste der aktiven Spieler: " + server.getActivePlayersList());
         server.sendMessageToAllActivePlayersExceptOne(player,player.getName() + " drew a card.");
         server.sendMessageToOneClient(player, player.getPlayer().getHand().toString());
         server.sendMessageToOneClient(player, "Which card do you want to discard? Type $card1 or $card2.");
@@ -102,7 +103,7 @@ public class Game {
 
         ServerThread initialPlayer;
         initialPlayer = getInitialPlayer();
-        this.resortedListOfActivePlayers = reSortListOfActivePlayers(initialPlayer);
+        reSortListOfActivePlayers(initialPlayer);
 
         for(int i = 0; i < this.resortedListOfActivePlayers.size(); i++){
             takeInitialTurn(resortedListOfActivePlayers.get(i));
@@ -122,14 +123,15 @@ public class Game {
         server.sendMessageToAllActivePlayersExceptOne(player,player.getName() + " drew a card.");
         server.sendMessageToOneClient(player, player.getPlayer().getHand().toString());
     }
-        private List<ServerThread> reSortListOfActivePlayers(ServerThread initialPlayer){
+        private void reSortListOfActivePlayers(ServerThread initialPlayer){
 
             List<ServerThread> firstSubList =
                     server.getActivePlayersList().subList(server.getActivePlayersList().indexOf(initialPlayer), server.getActivePlayersList().size());
             List<ServerThread> secondSubList = server.getActivePlayersList().subList(0, server.getActivePlayersList().indexOf(initialPlayer));
             firstSubList.addAll(secondSubList);
             System.out.println("ResortedList: " + firstSubList);
-            return firstSubList;
+            this.resortedListOfActivePlayers.addAll(firstSubList);
+            server.setActivePlayersList(this.resortedListOfActivePlayers);
 
         }
         private ServerThread getInitialPlayer(){

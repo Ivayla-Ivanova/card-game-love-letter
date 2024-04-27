@@ -172,7 +172,7 @@ public class ServerThread extends Thread {
                     return null;
                 }
 
-                if (server.getNames().contains(name) || name.isBlank()) {
+                if (server.getNames().contains(name) || name.isBlank() || name.startsWith("$") || name.startsWith("@")) {
                     String sendMessage = "This name is not available. Please enter another name: ";
                     out.println(sendMessage);
                 } else {

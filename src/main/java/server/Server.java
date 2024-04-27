@@ -86,6 +86,10 @@ public class Server {
     public synchronized Game getGame(){
         return this.game;
     }
+    public synchronized void setActivePlayersList(List<ServerThread> activePlayers){
+        this.activePlayersList = activePlayers;
+    }
+
 
     //------------------Add/RemoveMethods------------------------------------------------------------------
     public synchronized void addToMap(ServerThread serverThread){
@@ -102,16 +106,7 @@ public class Server {
         names.remove(name);
     }
 
-    public synchronized void addToActivePlayersList(ServerThread player){
 
-        this.activePlayersList.add(player);
-
-    }
-
-    public synchronized void removeFromActivePlayersList(ServerThread player){
-
-        this.activePlayersList.remove(player);
-    }
 
 
     //--------------------MessageMethods-----------------------------------------------------------------------
@@ -210,8 +205,8 @@ public class Server {
         }
 
         this.activePlayerCount = this.activePlayerCount + 1;
+        activePlayersList.add(client);
         System.out.println("ServerThread " + client.getName() + " joined the game.");
-        notifyAll();
         return true;
 
     }
@@ -225,8 +220,8 @@ public class Server {
         }
 
         this.activePlayerCount = this.activePlayerCount - 1;
+        activePlayersList.remove(client);
         System.out.println("ServerThread " + client.getName() + " have exited the game.");
-        notifyAll();
         return true;
 
     }
@@ -260,7 +255,6 @@ public class Server {
                 String sendMessage = "You were not able to join the game. Please try again later.";
                 sendMessageToOneClient(serverThread, sendMessage);
             } else {
-                addToActivePlayersList(serverThread);
                 serverThread.setHasJoinedGame(true);
                 String sendMessage = "You joined the game.\nTo exit the game type $exitGame.";
                 sendMessageToOneClient(serverThread, sendMessage);
@@ -312,6 +306,9 @@ public class Server {
         }
 
         this.game.startRound(serverThread);
+        if(serverThreads.isEmpty()) {
+            System.out.println("Liste aller Teilnehmende ist leer" );
+        }
 
 
     }
@@ -330,7 +327,6 @@ public class Server {
                 String sendMessage = "You were not able to exit the game.";
             } else {
                 serverThread.setHasJoinedGame(false);
-                removeFromActivePlayersList(serverThread);
                 String sendMessage = "You have exited the game.";
                 sendMessageToOneClient(serverThread, sendMessage);
                 String sendToEveryoneMessage = serverThread.getName() + " has exited the game";

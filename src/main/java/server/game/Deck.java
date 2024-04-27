@@ -103,6 +103,8 @@ public class Deck {
             return true;
         }
 
+        return false;
+
     }
 
     public String printTopThreeCards(){

@@ -9,7 +9,6 @@ import java.util.Random;
 public class PlayerThread extends Thread{
 
     private String name;
-    private List<ServerThread> activePlayers;
     private ServerThread serverThread;
     private Server server;
     private Hand hand;
@@ -29,7 +28,6 @@ public class PlayerThread extends Thread{
 
         this.serverThread = serverThread;
         this.name = serverThread.getName();
-        this.activePlayers = new ArrayList<>();
         this.server = server;
 
 
