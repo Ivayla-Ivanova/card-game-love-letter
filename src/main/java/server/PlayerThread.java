@@ -37,24 +37,10 @@ public class PlayerThread extends Thread{
     }
 
     public void run(){
-        serverThread.sendingMessageToEveryone(server.getActivePlayersList(), "The game has started. You are playing now!\n" +
-                                                                "To see the description of the cards, enter $help. ");
-        for(ServerThread client : server.getServerThreadsList()){
 
-            if(server.getActivePlayersList().contains(client)){
-                continue;
-            }
-            serverThread.sendingMessageToOneClient(client, "The game has started. You cannot join it anymore.");
+        while (true){
 
         }
-
-        for(ServerThread serverThread : server.getActivePlayersList()){
-            String sendMessage = "Last time you went on a date was "
-                                 + getDaysSinceLastDate()+" days ago!";
-            serverThread.sendingMessageToOneClient(serverThread, sendMessage);
-        }
-
-        server.getGame().startRound(serverThread);
 
     }
 
@@ -84,6 +70,10 @@ public class PlayerThread extends Thread{
 
     public String getReceivedCard(){
         return this.receivedCard;
+    }
+
+    public void setReceivedCard(String value){
+        this.receivedCard = value;
     }
 
     public int getDaysSinceLastDate(){

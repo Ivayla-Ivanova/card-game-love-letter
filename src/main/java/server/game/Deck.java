@@ -78,6 +78,7 @@ public class Deck {
         return this.topCard;
     }
 
+
     public Card[] getNextThreeTopCards(){
         return this.nextThreeTopCards;
     }
@@ -93,6 +94,14 @@ public class Deck {
         listOfCards.remove(listOfCards.size() -1);
         return card;
 
+
+    }
+
+    public boolean IsDeckEmpty(){
+
+        if(listOfCards.isEmpty() || listOfCards == null){
+            return true;
+        }
 
     }
 

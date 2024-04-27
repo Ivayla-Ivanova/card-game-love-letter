@@ -23,10 +23,10 @@ public class ServerThread extends Thread {
 
     private String name;
 
-    private boolean haveJoinedGame;
+    private boolean hasJoinedGame;
     private PlayerThread player;
 
-
+//--------------------------------------------------------------------------------------------------------
     public ServerThread(Server server, Socket clientSocket) throws IOException {
         this.server = server;
         this.clientSocket = clientSocket;
@@ -35,9 +35,9 @@ public class ServerThread extends Thread {
         this.player = null;
 
         // A Thread cannot start executing before entering a valid name
-        this.name = enteringName();
-        this.haveJoinedGame = false;
-
+        this.name = enteringName(input, output);
+        this.hasJoinedGame = false;
+        server.addToMap(this);
 
     }
 
@@ -65,13 +65,13 @@ public class ServerThread extends Thread {
                     // Clean up after the client disconnects
                     if (receivedMessage == null) {
                         System.out.println(this.getName() + " interrupted.");
-                        exitingGame();
+                        server.exitGame(this);
 
-                        server.removeServerThread(this);
+                        server.removeFromMap(this);
                         server.removeName(this.getName());
 
                         String sendMessage = "%s left the room".formatted(this.getName());
-                        sendingMessageToEveryone(server.getServerThreadsList(), sendMessage);
+                        server.sendMessageToAllClients(sendMessage);
 
                         this.output.close();
                         this.interrupt();
@@ -79,18 +79,30 @@ public class ServerThread extends Thread {
                     } else if(receivedMessage.isBlank()){
                         //Do nothing
                     } else if (receivedMessage.startsWith("@")) {
-                        sendingPersonalMessage(receivedMessage);
+                        server.sendPersonalMessage(this, receivedMessage);
                     } else if(receivedMessage.startsWith("$")){
                         sendingGameMessage(receivedMessage);
                     } else {
                         String sendMessage = this.getName() + ": " + receivedMessage;
-                        sendingMessageToEveryone(server.getServerThreadsList(), sendMessage);
+                        server.sendMessageToAllClients(sendMessage);
                     }
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    //--------------Getter/Setter-Methods-------------------------------------------------------------------
+
+    public PrintWriter getOutput(){
+        return this.output;
+    }
+    public boolean getHasJoinedGame(){
+        return this.hasJoinedGame;
+    }
+    public void setHasJoinedGame(boolean value){
+        this.hasJoinedGame = value;
     }
 
     public PlayerThread getPlayer(){
@@ -101,77 +113,20 @@ public class ServerThread extends Thread {
         this.player = player;
     }
 
-    public void sendingMessageToOneClient(ServerThread client, String message){
-
-        client.output.println(message);
-    }
-
-    // Forwarding received messages from the client to other threads
-    public void sendingMessageToEveryone(List<ServerThread> listOfClients, String message) {
-
-        for (ServerThread client : listOfClients) {
-
-            sendingMessageToOneClient(client, message);
-        }
-    }
-
-    public void sendingMessageToOwnClient(String message){
-
-        sendingMessageToOneClient(this, message);
-
-    }
-
-    private void sendingPersonalMessage(String receivedMessage){
-
-        String [] temp = receivedMessage.split(" ", 2);
-
-        if (temp.length != 2) {
-
-            String sendMessage = """
-            Invalid request.
-            Please send private messages by e.g. writing '@name message'!""";
-            sendingMessageToOwnClient( sendMessage);
-            return;
-        }
-
-        String addresseeName = temp[0].substring(1);
-
-        if(!server.getNames().contains(addresseeName) || addresseeName.equals(this.name)){
-            String sendMessage = """
-            Invalid name.
-            Please send private messages by e.g. writing '@name message'!""";
-            sendingMessageToOwnClient(sendMessage);
-
-        }
-        if(temp[1].isBlank()){
-            return;
-        }
-        String sendMessage = "[private] " + this.getName() + ": " + temp[1];
-
-
-
-        for (ServerThread client : server.getServerThreadsList()) {
-
-            if (client.getName().equals(addresseeName)) {
-                sendingMessageToOneClient(client, sendMessage);
-            }
-        }
-
-    }
-
+//----------------------------------------------------------------------------------------------------------
     public void sendingGameMessage(String receivedMessage){
 
         if(receivedMessage.substring(1).equals("joinGame")){
 
-            joiningGame();
+            server.joinGame(this);
 
         }else if (receivedMessage.substring(1).equals("exitGame")){
 
-            exitingGame();
+            server.exitGame(this);
 
         }else if(receivedMessage.substring(1).equals("startGame")){
 
-            startingGame();
+            server.starGame(this);
 
         }else if(receivedMessage.substring(1).equals("help")){
 
@@ -179,48 +134,31 @@ public class ServerThread extends Thread {
 
         } else if(receivedMessage.substring(1).equals("card1")){
 
-            //this.receivedCard = "card1";
+            player.setReceivedCard("card1");
+            System.out.println("Gespielte Karte: " + player.getReceivedCard());
+            player.setHasPlayedCard(true);
+            server.getGame().playCard(this);
 
         } else if(receivedMessage.substring(1).equals("card2")){
 
-            //this.receivedCard = "card2";
+            player.setReceivedCard("card2");
+            System.out.println("Gespielte Karte: " + player.getReceivedCard());
+            player.setHasPlayedCard(true);
+            server.getGame().playCard(this);
+
 
         }else {
 
             String sendMessage = "You have entered an invalid game command. Please try again.";
-            sendingMessageToOwnClient(sendMessage);
+            server.sendMessageToOneClient(this, sendMessage);
         }
 
     }
 
 
-    public void sendingToAllPlayersExceptMe(String message){
+    //---------FullyImplementedMethods---------------------------------------------------------------------
 
-        for (ServerThread client : server.getActivePlayersList()) {
-
-            if(client == this){
-                continue;
-            }
-
-            sendingMessageToOneClient(client, message);
-        }
-
-    }
-    private void printCardDescription() {
-        String description = """ 
-                8-Princess (1): Lose if discarded.
-                7-Countess (1): Must be played if you have Kind or Prince in hand.
-                6-King (1): Trade hands with another player.
-                5-Prince (2): Choose another player. They discard their hand and draw a new card.
-                4-Handmaid (2): You cannot be chosen until your next turn.
-                3-Baron (2): Compare hands with another player; lower number is out.
-                2-Priest (2): Look at a player´s hand.
-                1-Guard (2): Guess a player´s hand; if correct the player is out.
-                """;
-        sendingMessageToOwnClient(description);
-    }
-
-    private String enteringName() {
+    private String enteringName(BufferedReader in, PrintWriter out) {
 
         String name;
 
@@ -228,7 +166,7 @@ public class ServerThread extends Thread {
         try {
 
             while (true) {
-                name = this.input.readLine();
+                name = in.readLine();
 
                 if(name == null){
                     return null;
@@ -236,7 +174,7 @@ public class ServerThread extends Thread {
 
                 if (server.getNames().contains(name) || name.isBlank()) {
                     String sendMessage = "This name is not available. Please enter another name: ";
-                    sendingMessageToOwnClient(sendMessage);
+                    out.println(sendMessage);
                 } else {
                     server.getNames().add(name);
                     break;
@@ -249,155 +187,30 @@ public class ServerThread extends Thread {
         }
 
         String welcomeMessage = "Welcome " + name + "!\nIf you wish to join the game, please type $joinGame.";
-        sendingMessageToOwnClient(welcomeMessage);
+        output.println(welcomeMessage);
 
         //Informing other threads that a new client has joined
 
-        sendingMessageToEveryone(server.getServerThreadsList(), "%s joined the room".formatted(name));
+        server.sendMessageToAllClients("%s joined the room".formatted(name));
 
 
         return name;
     }
 
-    private void joiningGame(){
-
-        try {
-
-            if(server.getHasGameStarted()){
-                String sendMessage = "The game has started. You cannot join it anymore.";
-                sendingMessageToOwnClient(sendMessage);
-                return;
-            }
-
-            if(haveJoinedGame == true){
-                String sendMessage = "You have already joined the game.";
-                sendingMessageToOwnClient(sendMessage);
-                return;
-            }
-
-            if(server.increaseActivePlayerCount(this) == false){
-
-                String sendMessage = "You were not able to join the game. Please try again later.";
-                sendingMessageToOwnClient(sendMessage);
-            } else {
-                server.addToActivePlayersList(this);
-                this.haveJoinedGame = true;
-                String sendMessage = "You joined the game.\nTo exit the game type $exitGame.";
-                sendingMessageToOwnClient(sendMessage);
-                String sendToEveryoneMessage = this.name + " joined the game";
-                for(ServerThread player : server.getActivePlayersList()){
-
-                    if(player == this){
-                        continue;
-                    }
-
-                    sendingMessageToOneClient(player, sendToEveryoneMessage);
-                }
-                printGameMessagesToActivePlayers(server.getActivePlayerCount());
-
-            }
-
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-
-    }
-
-    private void exitingGame(){
-
-        if(haveJoinedGame == false){
-            String sendMessage = "You cannot exit the game if you have not yet joined it.";
-            sendingMessageToOwnClient(sendMessage);
-            return;
-        }
-
-        try {
-
-            if(server.decreaseActivePlayerCount(this) == false){
-                String sendMessage = "You were not able to exit the game.";
-            } else {
-                this.haveJoinedGame = false;
-                server.removeFromActivePlayersList(this);
-                String sendMessage = "You have exited the game.";
-                sendingMessageToOwnClient(sendMessage);
-                String sendToEveryoneMessage = this.name + " has exited the game";
-                for(ServerThread player : server.getActivePlayersList()){
-
-                    if(player == this){
-                        continue;
-                    }
-
-                    sendingMessageToOneClient(player, sendToEveryoneMessage);
-                }
-                if(server.getHasGameStarted() == false) {
-                    printGameMessagesToActivePlayers(server.getActivePlayerCount());
-                }
-            }
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-
-    }
-
-    public void startingGame(){
-
-        if(!haveJoinedGame){
-            String sendMessage = "You need to first join the game to start it.";
-            sendingMessageToOwnClient(sendMessage);
-            return;
-        }
-
-        if(server.getHasGameStarted()){
-            String sendMessage = "The game has already started.";
-            sendingMessageToOwnClient(sendMessage);
-            return;
-        }
-
-        if(server.getActivePlayerCount() < 2){
-            printGameMessagesToActivePlayers(server.getActivePlayerCount());
-            return;
-        }
-
-        server.startingGame();
-        for(ServerThread client : server.getActivePlayersList()) {
-            client.setPlayer(new PlayerThread(client, server));
-        }
-        this.player.start();
 
 
-    }
-
-    private void printGameMessagesToActivePlayers(int count){
-
-
-        String countMessage;
-
-        switch (count) {
-            case 0:
-                countMessage = "There needs to be at least two players to start the game.";
-                sendingMessageToEveryone(server.getActivePlayersList(), countMessage);
-                break;
-
-            case 1:
-                countMessage = "Waiting for at least one more player to start the game.";
-                sendingMessageToEveryone(server.getActivePlayersList(), countMessage);
-                break;
-            case 2:
-                countMessage = "You can start the game now by typing $startGame or wait for one or two more players to join.";
-                sendingMessageToEveryone(server.getActivePlayersList(), countMessage);
-                break;
-            case 3:
-                countMessage = "You can start the game now by typing $startGame or wait for one more player to join.";
-                sendingMessageToEveryone(server.getActivePlayersList(), countMessage);
-                break;
-            case 4:
-                countMessage = "You can start the game now by typing $startGame.";
-                sendingMessageToEveryone(server.getActivePlayersList(), countMessage);
-                break;
-            default:
-                // Do nothing
-        }
-
+    private void printCardDescription() {
+        String description = """ 
+                8-Princess (1): Lose if discarded.
+                7-Countess (1): Must be played if you have Kind or Prince in hand.
+                6-King (1): Trade hands with another player.
+                5-Prince (2): Choose another player. They discard their hand and draw a new card.
+                4-Handmaid (2): You cannot be chosen until your next turn.
+                3-Baron (2): Compare hands with another player; lower number is out.
+                2-Priest (2): Look at a player´s hand.
+                1-Guard (2): Guess a player´s hand; if correct the player is out.
+                """;
+        server.sendMessageToOneClient(this, description);
     }
 
 

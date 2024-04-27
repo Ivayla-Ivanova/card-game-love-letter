@@ -41,34 +41,28 @@ public class Game {
     }
 
     public void takeTurn(ServerThread player) {
-        player.getPlayer().setIsOnTurn(true);
         player.getPlayer().setHasPlayedCard(false);
         player.getPlayer().getHand().addToHand(deck.drawCard());
-        player.sendingMessageToOwnClient("You drew a card.");
-        player.sendingToAllPlayersExceptMe(player.getName() + " drew a card.");
-        player.sendingMessageToOwnClient(player.getPlayer().getHand().toString());
-        player.sendingMessageToOwnClient("Which card do you want to discard? Type $card1 or $card2.");
-        /*while(player.getPlayer().getHasPlayedCard() == false){
-            playCard(player);
-        }
-*/
+        server.sendMessageToOneClient(player, "You drew a card.");
+        server.sendMessageToAllActivePlayersExceptOne(player,player.getName() + " drew a card.");
+        server.sendMessageToOneClient(player, player.getPlayer().getHand().toString());
+        server.sendMessageToOneClient(player, "Which card do you want to discard? Type $card1 or $card2.");
+
 
     }
-/*
+
     public void playCard(ServerThread player){
 
-        if(player.getReceivedCard() == "card1"){
+        if(player.getPlayer().getReceivedCard() == "card1"){
             try {
-                discardCard(player, player.getHand().getCard1());
-                player.setHasPlayedCard(true);
+                discardCard(player, player.getPlayer().getHand().getCard1());
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
-        if(player.getReceivedCard() == "card2"){
+        if(player.getPlayer().getReceivedCard() == "card2"){
             try {
-                discardCard(player, player.getHand().getCard2());
-                player.setHasPlayedCard(true);
+                discardCard(player, player.getPlayer().getHand().getCard2());
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -77,43 +71,33 @@ public class Game {
 
     }
 
- */
 
     public void  discardCard(ServerThread player, Card card) throws IOException {
 
         player.getPlayer().getHand().removeFromHand(card);
         // add to discardPile
-        player.sendingMessageToOwnClient("You discarded " + card.toString() + ".");
-        player.sendingToAllPlayersExceptMe(player.getName() +" discarded " + card.toString());
-        player.sendingMessageToOwnClient(player.getPlayer().getHand().toString());
-        card.applyCardEffect(player);
-        player.getPlayer().setIsOnTurn(false);
+        server.sendMessageToOneClient(player, "You discarded " + card.toString() + ".");
+        server.sendMessageToAllActivePlayersExceptOne(player, player.getName() +" discarded " + card.toString());
+        server.sendMessageToOneClient(player, player.getPlayer().getHand().toString());
+        //card.applyCardEffect(player);
 
     }
 
 
 
-    public void takeInitialTurn(ServerThread player) {
 
-        player.getPlayer().setIsOnTurn(true);
-        player.getPlayer().getHand().addToHand(deck.drawCard());
-        player.sendingMessageToOwnClient("You drew a card.");
-        player.sendingToAllPlayersExceptMe(player.getName() + " drew a card.");
-        player.sendingMessageToOwnClient(player.getPlayer().getHand().toString());
-        player.getPlayer().setIsOnTurn(false);
-    }
 
 
     public void startRound(ServerThread player) {
 
         this.deck.setUp();
         String gameMessage = "The top card has been set aside.";
-        player.sendingMessageToEveryone(server.getActivePlayersList(), gameMessage);
+        server.sendMessageToAllActivePlayers(gameMessage);
 
         if (server.getActivePlayerCount() == 2) {
             String gameMessageForTwoPlayers;
             gameMessageForTwoPlayers = deck.printTopThreeCards();
-            player.sendingMessageToEveryone(server.getActivePlayersList(), gameMessageForTwoPlayers);
+            server.sendMessageToAllActivePlayers(gameMessageForTwoPlayers);
         }
 
         ServerThread initialPlayer;
@@ -124,38 +108,46 @@ public class Game {
             takeInitialTurn(resortedListOfActivePlayers.get(i));
         }
 
-        for(int i = 0; i < this.resortedListOfActivePlayers.size(); i++){
-            takeTurn(resortedListOfActivePlayers.get(i));
-        }
+        takeTurn(initialPlayer);
+
 
         }
 
+        //--------FullyImplementedAndWorkingMethods-----------------------
+
+        public void takeInitialTurn(ServerThread player) {
+
+        player.getPlayer().getHand().addToHand(deck.drawCard());
+        server.sendMessageToOneClient(player, "You drew a card.");
+        server.sendMessageToAllActivePlayersExceptOne(player,player.getName() + " drew a card.");
+        server.sendMessageToOneClient(player, player.getPlayer().getHand().toString());
+    }
         private List<ServerThread> reSortListOfActivePlayers(ServerThread initialPlayer){
 
             List<ServerThread> firstSubList =
                     server.getActivePlayersList().subList(server.getActivePlayersList().indexOf(initialPlayer), server.getActivePlayersList().size());
             List<ServerThread> secondSubList = server.getActivePlayersList().subList(0, server.getActivePlayersList().indexOf(initialPlayer));
             firstSubList.addAll(secondSubList);
+            System.out.println("ResortedList: " + firstSubList);
             return firstSubList;
 
         }
-
         private ServerThread getInitialPlayer(){
 
             for (ServerThread initialPlayer : server.getActivePlayersList()) {
 
                 if (initialPlayer.getPlayer().getWonLastRound()) {
-                    initialPlayer.sendingMessageToOwnClient("You won in the last round. Now it's your turn to go first in this round.");
-                    initialPlayer.sendingToAllPlayersExceptMe(initialPlayer.getName() + " won the last round. Now " + initialPlayer.getName() + " goes first.");
+
+                    server.sendMessageToOneClient(initialPlayer, "You won in the last round. Now it's your turn to go first in this round.");
+                    server.sendMessageToAllActivePlayersExceptOne(initialPlayer, initialPlayer.getName() + " won the last round. Now " + initialPlayer.getName() + " goes first.");
                     return initialPlayer;
 
                 }
 
                 if (initialPlayer.getPlayer().getDaysSinceLastDate() == getLowestDaysSinceDate()) {
 
-
-                    initialPlayer.sendingMessageToOwnClient("You had recently a date. Now it's your turn to go first in this round.");
-                    initialPlayer.sendingToAllPlayersExceptMe(initialPlayer.getName() + " had recently a date. Now " + initialPlayer.getName() + " goes first.");
+                    server.sendMessageToOneClient(initialPlayer, "You had recently a date. Now it's your turn to go first in this round.");
+                    server.sendMessageToAllActivePlayersExceptOne(initialPlayer, initialPlayer.getName() + " had recently a date. Now " + initialPlayer.getName() + " goes first.");
                     return initialPlayer;
 
 

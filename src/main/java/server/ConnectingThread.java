@@ -21,7 +21,6 @@ public class ConnectingThread extends Thread{
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        server.getServerThreadsList().add(client);
         client.start();
     }
 
