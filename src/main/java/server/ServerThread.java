@@ -144,6 +144,14 @@ public class ServerThread extends Thread {
         this.hasPlayedCard = value;
     }
 
+    public boolean getHasWonLastRound(){
+        return  this.wonLastRound;
+    }
+
+    public void setHasWonLastRound(boolean value){
+        this.wonLastRound = value;
+    }
+
     public String getReceivedCard(){
         return this.receivedCard;
     }

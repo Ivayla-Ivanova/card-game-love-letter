@@ -10,7 +10,6 @@ import java.util.*;
 
 public class Server {
     private static Server instance = null;
-    private ArrayList<ServerThread> serverThreads;
     private ServerSocket serverSocket;
     private Set<String> names;
     private ArrayList<ServerThread> activePlayersList;
@@ -26,7 +25,6 @@ public class Server {
     // Constructor for a Singleton instance
     private Server() {
 
-        this.serverThreads = new ArrayList<>();
         this.names = new HashSet<>();
         this.activePlayerCount = 0;
         this.activePlayersList = new ArrayList<>();
@@ -313,10 +311,7 @@ public class Server {
             sendMessageToOneClient(player, sendMessage);
         }
 
-        this.game.startRound(serverThread);
-        if(serverThreads.isEmpty()) {
-            System.out.println("Liste aller Teilnehmende ist leer" );
-        }
+        this.game.startRound();
 
 
     }

@@ -31,6 +31,10 @@ public class Hand {
     public int getHandScore(){
         int score;
 
+        if(this.card1 == null && this.card2 == null){
+            return 0;
+        }
+
         if(this.card1 == null) {
             score = this.card2.getCardNumber();
             return score;
@@ -57,6 +61,11 @@ public class Hand {
         if(this.card1 == card){
             setCard1(null);
         } else setCard2(null);
+    }
+
+    public void clearHand(){
+        this.card1 = null;
+        this.card2 = null;
     }
 
     @Override
