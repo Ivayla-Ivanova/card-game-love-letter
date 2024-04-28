@@ -38,7 +38,7 @@ public class ServerThread extends Thread {
     private boolean isProtected;
 
     private Card discaredCard;
-    private ServerThread selectedPlayer;
+    private boolean playedSelection;
 
     private static Random randomGenerator = new Random();
 
@@ -71,8 +71,16 @@ public class ServerThread extends Thread {
         this.hasCountess = false;
         this.isProtected = false;
         this.discaredCard = null;
-        this.selectedPlayer = null;
+        this.playedSelection = true;
 
+    }
+
+    public boolean getPlayedSelection(){
+        return this.playedSelection;
+    }
+
+    public void setPlayedSelection(boolean value){
+        this.playedSelection = value;
     }
 
     public ArrayList<Card> getDiscardPile(){
@@ -107,9 +115,6 @@ public class ServerThread extends Thread {
         return this.nameOfChosenPlayer;
     }
 
-    public ServerThread getSelectedPlayer(){
-        return this.selectedPlayer;
-    }
 
     @Override
     public void run() {

@@ -223,6 +223,11 @@ public class Game {
 
     public void playCard(ServerThread player){
 
+        if(player.getPlayedSelection()==false){
+            server.sendMessageToOneClient(player, "You cannot use this game command right now.");
+            return;
+        }
+
         if(player.getReceivedCard() == "card1"){
 
             if(player.getHand().getCard1() == null){
@@ -299,11 +304,15 @@ public class Game {
             server.getGame().endRound();
         }
 
+        player.setPlayedSelection(true);
         return true;
         }
 
     public void  discardCard(ServerThread player, Card card) throws IOException {
 
+        if(card.getCardNumber() == 2 || card.getCardNumber() == 6){
+            player.setPlayedSelection(false);
+        }
         player.setDiscaredCard(card);
         player.getHand().removeFromHand(card);
         player.addToDiscardPile(card);
