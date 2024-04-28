@@ -6,7 +6,6 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 import server.game.cards.Card;
@@ -47,6 +46,7 @@ public class ServerThread extends Thread {
         this.name = enteringName(input, output);
         this.hasJoinedGame = false;
         server.addToMap(this);
+        server.addToServerThreadList(this);
 
         resetPlayerAttributes();
 
@@ -124,6 +124,7 @@ public class ServerThread extends Thread {
     public PrintWriter getOutput(){
         return this.output;
     }
+
     public boolean getHasJoinedGame(){
         return this.hasJoinedGame;
     }
@@ -137,17 +138,10 @@ public class ServerThread extends Thread {
     public void setIsInRound(boolean value){
         this.isInRound = value;
     }
-    public boolean getHasPlayedCard(){
-        return this.hasPlayedCard;
-    }
-    public void setHasPlayedCard(boolean value){
-        this.hasPlayedCard = value;
-    }
 
     public boolean getHasWonLastRound(){
         return  this.wonLastRound;
     }
-
     public void setHasWonLastRound(boolean value){
         this.wonLastRound = value;
     }
@@ -156,22 +150,13 @@ public class ServerThread extends Thread {
         return this.receivedCard;
     }
 
-    public void setReceivedCard(String value){
-        this.receivedCard = value;
-    }
-
     public int getDaysSinceLastDate(){
         return this.daysSinceLastDate;
-    }
-
-    public boolean getWonLastRound(){
-        return this.wonLastRound;
     }
 
     public void setIsOnTurn(boolean value){
         this.isOnTurn = value;
     }
-
     public boolean getIsOnTurn(){
         return this.isOnTurn;
     }
@@ -180,12 +165,10 @@ public class ServerThread extends Thread {
         return this.hand;
     }
 
-    public void addToken(){
-        int newTokens = this.tokens + 1;
-        this.tokens = newTokens;
+    public void addTokens(){
+        this.tokens = this.tokens + 1;
     }
-
-    public int getToken(){
+    public int getTokens(){
         return this.tokens;
     }
 
@@ -193,11 +176,9 @@ public class ServerThread extends Thread {
         this.discardPile.add(card);
 
     }
-
     public void clearDiscardPile(){
         this.discardPile.clear();
     }
-
     public String getDiscardPileRepresentation(){
 
         StringBuilder printDiscardPile = new StringBuilder("Discard Pile: [");
@@ -209,7 +190,6 @@ public class ServerThread extends Thread {
 
         return String.valueOf(printDiscardPile);
     }
-
     public int getScoreOfDiscardPile(){
         int score = 0;
         for(Card card : this.discardPile){
@@ -227,6 +207,7 @@ public class ServerThread extends Thread {
             server.joinGame(this);
 
         }else if (receivedMessage.substring(1).equals("exitGame")){
+
 
             server.exitGame(this);
 

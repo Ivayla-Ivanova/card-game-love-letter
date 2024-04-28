@@ -6,7 +6,6 @@ import server.game.cards.Card;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -21,6 +20,8 @@ public class Game {
     private int numberOfTokensToWin;
     private ConcurrentHashMap<ServerThread, Integer> roundWinners;
     private ServerThread roundWinner;
+    private ServerThread gameWinner;
+    private ArrayList<ServerThread> gameWinners;
 
 
 
@@ -29,9 +30,9 @@ public class Game {
         this.server = server;
         this.deck = Deck.getInstance(this);
         this.listOfActivePlayers = activePlayers;
-        this.initialCountOfActivePlayers = activePlayers.size();
-        this.roundWinners = new ConcurrentHashMap<ServerThread, Integer>();
-        this.roundWinner = null;
+
+        resetGame();
+
         if(activePlayers.size() == 2){
             this.numberOfTokensToWin = 7;
         }
@@ -43,6 +44,15 @@ public class Game {
             this.numberOfTokensToWin = 4;
         }
 
+    }
+
+    public void resetGame(){
+
+        this.initialCountOfActivePlayers = server.getActivePlayerList().size();
+        this.roundWinners = new ConcurrentHashMap<ServerThread, Integer>();
+        this.roundWinner = null;
+        this.gameWinner = null;
+        this.gameWinners = new ArrayList<>();
     }
 
     public static synchronized Game getInstance(Server server, ArrayList<ServerThread> activePlayers) {
@@ -145,7 +155,7 @@ public class Game {
 
     }
 
-    public void endRound(){
+    public void endRound() {
 
         //Inform all activePlayers that the round has ended.
         for(ServerThread player : this.listOfActivePlayers){
@@ -170,8 +180,8 @@ public class Game {
 
         // Show tokens update
         for(ServerThread player : this.listOfActivePlayers) {
-            server.sendMessageToOneClient(player, "You have " + player.getToken() + " token(s).");
-            server.sendMessageToAllActivePlayersExceptOne(player,player.getName() + " has " + player.getToken() + " token(s).");
+            server.sendMessageToOneClient(player, "You have " + player.getTokens() + " token(s).");
+            server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + " has " + player.getTokens() + " token(s).");
             player.clearDiscardPile();
             player.getHand().clearHand();
         }
@@ -179,13 +189,32 @@ public class Game {
         // Determine if there is a game winner
         for(ServerThread player : server.getActivePlayerList()){
 
-            if(player.getToken() == this.numberOfTokensToWin){
-                server.sendMessageToAllActivePlayers("There is a winner! Game over.");
+            if(player.getTokens() == this.numberOfTokensToWin){
+                this.gameWinner = player;
+                this.gameWinners.add(player);
+            }
+        }
+
+        if(this.gameWinners.size() == 1){
+            server.sendMessageToAllActivePlayers(this.gameWinner.getName() + " is the winner!");
+            server.gameOver();
+
+            return;
+        }
+
+        if(this.gameWinners.size() > 1){
+            for(ServerThread winner : this.gameWinners){
+                server.sendMessageToAllActivePlayers(winner.getName() + " is a winner!");
+                server.gameOver();
                 return;
             }
         }
+
         startRound();
     }
+
+
+
 
     public synchronized void getRoundWinner(){
 
@@ -243,7 +272,7 @@ public class Game {
 
                 ArrayList<ServerThread> winners = new ArrayList<>(getRoundWinnersMap().size());
                 for(ServerThread winner : getRoundWinnersMap().keySet()){
-                    winner.addToken();
+                    winner.addTokens();
                     winner.setHasWonLastRound(true);
                     winners.add(winner);
                 }
@@ -254,7 +283,7 @@ public class Game {
                 }
                 message.append(winners.getLast().getName());
                 for(ServerThread winner : winners){
-                    winner.addToken();
+                    winner.addTokens();
                     winner.setHasWonLastRound(true);
                 }
                 server.sendMessageToAllActivePlayers(String.valueOf(message));
@@ -264,13 +293,13 @@ public class Game {
             }
 
             // else there is one winner
-            this.roundWinner.addToken();
+            this.roundWinner.addTokens();
             this.roundWinner.setHasWonLastRound(true);
             server.sendMessageToAllActivePlayers("The winner of this round is " + this.roundWinner.getName());
             return;
         }
 
-        this.roundWinner.addToken();
+        this.roundWinner.addTokens();
         this.roundWinner.setHasWonLastRound(true);
         server.sendMessageToAllActivePlayers("The winner of this round is " + this.roundWinner.getName());
     }

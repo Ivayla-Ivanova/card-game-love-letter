@@ -14,6 +14,7 @@ public class Server {
     private Set<String> names;
     private ArrayList<ServerThread> activePlayersList;
     private Map<ServerThread, PrintWriter> mapOfServerThreads;
+    private ArrayList<ServerThread> serverThreads;
 
     private int activePlayerCount;
 
@@ -31,6 +32,7 @@ public class Server {
         this.hasGameStarted = false;
         this.game = null;
         this.mapOfServerThreads = new HashMap<>();
+        this.serverThreads = new ArrayList<>();
 
         try {
             serverSocket = new ServerSocket(5000);
@@ -87,8 +89,9 @@ public class Server {
     public synchronized ArrayList<ServerThread> getActivePlayerList(){
         return this.activePlayersList;
     }
-    public synchronized void setActivePlayersList(ArrayList<ServerThread> activePlayers){
-        this.activePlayersList = activePlayers;
+
+    public synchronized void setHasGameStarted(boolean value){
+        this.hasGameStarted = value;
     }
 
 
@@ -101,6 +104,10 @@ public class Server {
     public synchronized void removeFromMap(ServerThread serverThread){
 
         mapOfServerThreads.remove(serverThread);
+    }
+    public synchronized void addToServerThreadList(ServerThread client){
+        this.serverThreads.add(client);
+
     }
 
     public synchronized void removeName(String name){
@@ -243,6 +250,23 @@ public class Server {
 
 
     }
+    public void gameOver(){
+
+        sendMessageToAllClients("The game is over.");
+
+        for(ServerThread client : serverThreads){
+            client.resetPlayerAttributes();
+            try {
+                decreaseActivePlayerCount(client);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            client.setHasJoinedGame(false);
+        }
+        game.resetGame();
+        setHasGameStarted(false);
+        sendMessageToAllClients("You can join a new game by typing $joinGame.");
+    }
     public synchronized void joinGame(ServerThread serverThread){
 
         try {
@@ -318,6 +342,7 @@ public class Server {
 
     public  synchronized void exitGame(ServerThread serverThread){
 
+        //it user type $exitGame before joining the game
         if(serverThread.getHasJoinedGame() == false){
             String sendMessage = "You cannot exit the game if you have not yet joined it.";
             sendMessageToOneClient(serverThread, sendMessage);
@@ -328,12 +353,23 @@ public class Server {
 
             if(decreaseActivePlayerCount(serverThread) == false){
                 String sendMessage = "You were not able to exit the game.";
+                sendMessageToOneClient(serverThread, sendMessage);
             } else {
                 serverThread.setHasJoinedGame(false);
                 String sendMessage = "You have exited the game.";
                 sendMessageToOneClient(serverThread, sendMessage);
-                String sendToEveryoneMessage = serverThread.getName() + " has exited the game";
+                String sendToEveryoneMessage = serverThread.getName() + " has exited the game.";
                 sendMessageToAllActivePlayersExceptOne(serverThread, sendToEveryoneMessage);
+
+                if(hasGameStarted == true){
+
+                    if(activePlayersList.size() < 2){
+                        gameOver();
+                        return;
+                    } else{
+                        //not implemented
+                    }
+                }
 
                 if(hasGameStarted == false) {
                     printGameMessagesToActivePlayers(this.activePlayerCount);
