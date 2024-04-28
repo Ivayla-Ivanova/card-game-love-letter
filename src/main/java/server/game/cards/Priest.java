@@ -7,8 +7,9 @@ import java.io.IOException;
 
 public class Priest extends Card {
 
-    public Priest(){
+    public Priest(Game game){
         super(2, "Priest");
+        this.game = game;
     }
 
     @Override

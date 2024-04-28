@@ -7,8 +7,9 @@ import java.io.IOException;
 
 public class Prince extends Card{
 
-    public Prince(){
+    public Prince(Game game){
         super(5, "Prince");
+        this.game = game;
     }
 
     @Override

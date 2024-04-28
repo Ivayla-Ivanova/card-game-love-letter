@@ -7,8 +7,9 @@ import java.io.IOException;
 
 public class Handmaid extends Card{
 
-    public Handmaid(){
+    public Handmaid(Game game){
         super(4, "Handmaid");
+        this.game = game;
     }
 
     @Override

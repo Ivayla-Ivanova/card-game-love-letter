@@ -7,8 +7,9 @@ import java.io.IOException;
 
 public class King extends Card{
 
-    public King(){
+    public King(Game game){
         super(6, "King");
+        this.game = game;
     }
 
     @Override

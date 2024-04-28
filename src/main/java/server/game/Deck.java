@@ -58,22 +58,22 @@ public class Deck {
         cardDeck[15] = new Guard();
         */
 
-        cardDeck[0] = new Princess();
-        cardDeck[1] = new Countess();
-        cardDeck[2] = new King();
-        cardDeck[3] = new Prince();
-        cardDeck[4] = new Prince();
-        cardDeck[5] = new Handmaid();
-        cardDeck[6] = new Handmaid();
-        cardDeck[7] = new Baron();
-        cardDeck[8] = new Baron();
-        cardDeck[9] = new Priest();
-        cardDeck[10] = new Priest();
-        cardDeck[11] = new Guard();
-        cardDeck[12] = new Guard();
-        cardDeck[13] = new Guard();
-        cardDeck[14] = new Guard();
-        cardDeck[15] = new Guard();
+        cardDeck[0] = new Princess(game);
+        cardDeck[1] = new Countess(game);
+        cardDeck[2] = new King(game);
+        cardDeck[3] = new Prince(game);
+        cardDeck[4] = new Prince(game);
+        cardDeck[5] = new Handmaid(game);
+        cardDeck[6] = new Handmaid(game);
+        cardDeck[7] = new Baron(game);
+        cardDeck[8] = new Baron(game);
+        cardDeck[9] = new Priest(game);
+        cardDeck[10] = new Priest(game);
+        cardDeck[11] = new Guard(game);
+        cardDeck[12] = new Guard(game);
+        cardDeck[13] = new Guard(game);
+        cardDeck[14] = new Guard(game);
+        cardDeck[15] = new Guard(game);
 
         List<Card> tempList = Arrays.asList(cardDeck);
 

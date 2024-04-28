@@ -34,6 +34,8 @@ public class ServerThread extends Thread {
     private int daysSinceLastDate;
     private String receivedCard;
 
+    private boolean hasCountess;
+
     private boolean hasPlayedCard;
     private static Random randomGenerator = new Random();
 
@@ -64,7 +66,16 @@ public class ServerThread extends Thread {
         this.daysSinceLastDate = randomGenerator.nextInt(366);
         this.receivedCard = null;
         this.hasPlayedCard = false;
+        this.hasCountess = false;
 
+    }
+
+    public boolean getHasCountess(){
+        return this.hasCountess;
+    }
+
+    public void setHasCountess(boolean value){
+        this.hasCountess = value;
     }
 
     @Override
@@ -208,7 +219,7 @@ public class ServerThread extends Thread {
 
         }else if (receivedMessage.substring(1).equals("exitGame")){
 
-
+            server.getGame().knockOutOfRound(this);
             server.exitGame(this);
 
         }else if(receivedMessage.substring(1).equals("startGame")){

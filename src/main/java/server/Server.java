@@ -366,8 +366,6 @@ public class Server {
                     if(activePlayersList.size() < 2){
                         gameOver();
                         return;
-                    } else{
-                        //not implemented
                     }
                 }
 

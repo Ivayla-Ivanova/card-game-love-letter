@@ -7,15 +7,21 @@ import java.io.IOException;
 
 public class Countess extends Card{
 
-    public Countess(){
+    public Countess(Game game){
         super(7, "Countess");
+        this.game = game;
     }
 
     @Override
     public String [] applyCardEffect(ServerThread player) throws IOException {
 
-        //not implemented
-        return null;
+        String [] cardEffect = new String[2];
+
+        player.setHasCountess(false);
+
+        cardEffect[0] = "You played the card 'Countess'.";
+        cardEffect[1] = player.getName() + " played the card 'Countess'.";
+        return cardEffect;
     }
 
     @Override
