@@ -68,6 +68,24 @@ public class Hand {
         this.card2 = null;
     }
 
+    public  Card discardHand(){
+
+        if(this.card1 == null && this.card2 == null){
+            return null;
+        }
+
+        if(this.card2 == null){
+            return card1;
+        }
+
+        if(this.card1 == null){
+            return card2;
+        }
+
+        return null;
+
+    }
+
     @Override
     public String toString() {
 

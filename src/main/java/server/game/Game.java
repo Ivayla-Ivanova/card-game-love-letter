@@ -92,20 +92,46 @@ public class Game {
     }
 
     public static void knockOutOfRound(ServerThread player) {
-        // Discard hand
         player.setIsInRound(false);
+        Card hand = player.getHand().discardHand();
+        player.addToDiscardPile(hand);
+        player.getHand().clearHand();
     }
 
     public void takeTurn(ServerThread player) {
 
-        player.setIsOnTurn(true);
-        player.getHand().addToHand(deck.drawCard());
-        server.sendMessageToOneClient(player, "You drew a card.");
-        server.sendMessageToAllActivePlayersExceptOne(player,player.getName() + " drew a card.");
-        server.sendMessageToOneClient(player, player.getHand().toString());
-        server.sendMessageToOneClient(player, "Which card do you want to discard? Type $card1 or $card2.");
+            player.setIsOnTurn(true);
+            player.getHand().addToHand(deck.drawCard());
+            server.sendMessageToOneClient(player, "You drew a card.");
+            server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + " drew a card.");
+            server.sendMessageToOneClient(player, player.getHand().toString());
+            server.sendMessageToOneClient(player, "Which card do you want to discard? Type $card1 or $card2.");
 
+    }
 
+    public synchronized void passTurn(ServerThread from){
+
+        ServerThread nextPlayer;
+        int indexOfNextPlayer;
+
+        if(listOfActivePlayers.indexOf(from) + 1 < listOfActivePlayers.size()) {
+            indexOfNextPlayer = listOfActivePlayers.indexOf(from) + 1;
+        } else{
+            indexOfNextPlayer = (listOfActivePlayers.indexOf(from) + 1) % listOfActivePlayers.size();
+        }
+
+        nextPlayer = listOfActivePlayers.get(indexOfNextPlayer);
+
+        if(nextPlayer == null){
+            System.out.println("There is no next player.");
+            return;
+        }
+
+        if(nextPlayer.getIsInRound() == true){
+            takeTurn(nextPlayer);
+        }else {
+            passTurn(nextPlayer);
+        }
     }
 
     public void playCard(ServerThread player){
@@ -146,12 +172,23 @@ public class Game {
 
         player.getHand().removeFromHand(card);
         player.addToDiscardPile(card);
-        server.sendMessageToOneClient(player, "You discarded " + card.toString() + ".");
-        server.sendMessageToOneClient(player, "Your " + player.getDiscardPileRepresentation());
-        server.sendMessageToAllActivePlayersExceptOne(player, player.getName() +" discarded " + card.toString());
-        server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + "'s " + player.getDiscardPileRepresentation());
-        server.sendMessageToOneClient(player, player.getHand().toString());
-        //card.applyCardEffect(player);
+        String [] cardEffect = null;
+        cardEffect = card.applyCardEffect(player);
+
+        if(card.getCardNumber() == 8){
+            String messageForOwnClient  = cardEffect[0];
+            String messageForEveryoneInRound = cardEffect[1];
+            server.sendMessageToOneClient(player, messageForOwnClient);
+            server.sendMessageToOneClient(player, "Your " + player.getDiscardPileRepresentation());
+            server.sendMessageToAllActivePlayersExceptOne(player, messageForEveryoneInRound);
+            server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + "'s " + player.getDiscardPileRepresentation());
+        } else {
+            server.sendMessageToOneClient(player, "You discarded " + card.toString() + ".");
+            server.sendMessageToOneClient(player, "Your " + player.getDiscardPileRepresentation());
+            server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + " discarded " + card.toString());
+            server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + "'s " + player.getDiscardPileRepresentation());
+            server.sendMessageToOneClient(player, "Your " + player.getHand().toString());
+        }
 
     }
 

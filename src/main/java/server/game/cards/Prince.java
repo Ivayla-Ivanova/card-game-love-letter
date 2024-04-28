@@ -12,9 +12,10 @@ public class Prince extends Card{
     }
 
     @Override
-    public void applyCardEffect(ServerThread player) throws IOException {
+    public String[] applyCardEffect(ServerThread player) throws IOException {
 
         //Not implemented
+        return null;
     }
 
     @Override

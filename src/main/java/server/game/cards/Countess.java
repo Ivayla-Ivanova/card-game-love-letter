@@ -12,9 +12,10 @@ public class Countess extends Card{
     }
 
     @Override
-    public void applyCardEffect(ServerThread player) throws IOException {
+    public String [] applyCardEffect(ServerThread player) throws IOException {
 
         //not implemented
+        return null;
     }
 
     @Override

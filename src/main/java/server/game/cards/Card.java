@@ -16,7 +16,7 @@ public abstract class Card {
 
     }
 
-    public abstract void applyCardEffect(ServerThread player) throws IOException;
+    public abstract String [] applyCardEffect(ServerThread player) throws IOException;
 
     public int getCardNumber() {
 

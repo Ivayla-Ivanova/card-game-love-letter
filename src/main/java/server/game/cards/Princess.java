@@ -12,14 +12,14 @@ public class Princess extends Card{
     }
 
     @Override
-    public void applyCardEffect(ServerThread player) throws IOException {
+    public String [] applyCardEffect(ServerThread player) throws IOException {
 
-        /*
-        player.sendingMessageToOwnClient("I played the card Princess and am kicked out of the round.");
-        player.sendingToAllPlayersExceptMe(player.getName()
-                + " played the card Princess and was kicked out of the round.");
-*/
+        String [] cardEffect = new String[2];
         Game.knockOutOfRound(player);
+
+        cardEffect[0] = "You played the card 'Princess' and you are kicked out of the round.";
+        cardEffect[1] = player.getName() + " played the card 'Princess' and was kicked out of the round.";
+        return cardEffect;
     }
 
     @Override
