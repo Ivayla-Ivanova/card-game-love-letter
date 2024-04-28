@@ -3,6 +3,7 @@ package server.game;
 import server.Server;
 import server.ServerThread;
 import server.game.cards.Card;
+import server.Hand;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -23,6 +24,7 @@ public class Game {
     private ServerThread gameWinner;
     private ArrayList<ServerThread> gameWinners;
     private ConcurrentHashMap<ServerThread, Boolean> playerInRound;
+    private ArrayList<ServerThread> selectable;
 
 
 
@@ -55,6 +57,7 @@ public class Game {
         this.gameWinner = null;
         this.gameWinners = new ArrayList<>();
         this.playerInRound = new ConcurrentHashMap<>();
+        this.selectable = new ArrayList<>();
 
     }
 
@@ -111,24 +114,81 @@ public class Game {
             server.sendMessageToOneClient(player, "You drew a card.");
             server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + " drew a card.");
             server.sendMessageToOneClient(player, player.getHand().toString());
+
             if(newCard.getCardNumber() == 7){
                 player.setHasCountess(true);
                 System.out.println(player.getName() + " drew the card 'Countess'.");
                 if(player.getHand().getCard1().getCardNumber() == 5 ||
                    player.getHand().getCard2().getCardNumber() == 6){
                     discardCard(player, newCard);
-                    passTurn(player);
-                    return;
+                    if(deck.IsDeckEmpty() == false){
+                        passTurn(player);
+                        return;
+                    } else{
+                        endRound();
+                        return;
+                    }
                 }
             }
-            if(newCard.getCardNumber() == 5 || newCard.getCardNumber() == 6){
-                if(player.getHasCountess() == true){
-                    discardCard(player, newCard);
-                    passTurn(player);
-                    return;
+            if(newCard.getCardNumber() == 5 || newCard.getCardNumber() == 6) {
+                if (player.getHasCountess() == true) {
+
+                    if (player.getHand().getCard1().getCardNumber() == 7) {
+                        discardCard(player, player.getHand().getCard1());
+                        if(deck.IsDeckEmpty() == false){
+                            passTurn(player);
+                            return;
+                        } else{
+                            endRound();
+                            return;
+                        }
+                    }
+
+                    if (player.getHand().getCard2().getCardNumber() == 7) {
+                        discardCard(player, player.getHand().getCard2());
+                        if(deck.IsDeckEmpty() == false){
+                            passTurn(player);
+                            return;
+                        } else{
+                            endRound();
+                            return;
+                        }
+                    }
                 }
             }
             server.sendMessageToOneClient(player, "Which card do you want to discard? Type $card1 or $card2.");
+
+    }
+
+    public void checkSelectable(ServerThread player){
+
+        ArrayList<ServerThread> selectable = new ArrayList<>();
+
+        for(ServerThread activePlayer : listOfActivePlayers){
+
+            if(activePlayer == player){
+                continue;
+            }
+
+            if(activePlayer.getIsInRound() == true && activePlayer.getIsProtected() == false){
+                selectable.add(activePlayer);
+            }
+
+        }
+
+        this.selectable = selectable;
+    }
+
+    public String printSelectable(){
+
+        StringBuilder message = new StringBuilder("Selectable players: ");
+        for(int i = 0; i < this.selectable.size() - 1; i++){
+            message.append(this.selectable.get(i).getName() + ", ");
+        }
+        message.append(this.selectable.get(this.selectable.size()- 1).getName() + ".");
+
+        return String.valueOf(message);
+
 
     }
 
@@ -190,13 +250,61 @@ public class Game {
             }
         }
 
-        player.setIsOnTurn(false);
+        if(player.getDiscardPile().getLast().getCardNumber() != 2 &&
+           player.getDiscardPile().getLast().getCardNumber() != 6) {
+            player.setIsOnTurn(false);
+        }
 
 
     }
 
+    public boolean playSelection(ServerThread player) {
+
+        ServerThread selected = null;
+
+        for (ServerThread selectable : this.selectable) {
+            if (selectable.getName().equals(player.getNameOfChosenPlayer())) {
+                selected = selectable;
+            }
+        }
+
+        if(selected == null){
+            return false;
+        }
+
+        if (player.getDiscaredCard().getCardNumber() == 2) {
+
+            String showHand = selected.getName()
+                                  + "'s " + selected.getHand().toString();
+                server.sendMessageToOneClient(player, showHand);
+            }
+
+
+        if(player.getDiscaredCard().getCardNumber() == 6){
+
+            Hand temp = player.getHand();
+            player.setHand(selected.getHand());
+            selected.setHand(temp);
+            server.sendMessageToOneClient(player,"Your new " + player.getHand().toString());
+            server.sendMessageToOneClient(selected,player.getName() +  " chose you and you traded cards!\n" +
+                                                   "Your new " + selected.getHand().toString());
+
+        }
+
+        player.setIsOnTurn(false);
+
+        if (deck.IsDeckEmpty() == false) {
+            server.getGame().passTurn(player);
+        } else {
+            server.getGame().endRound();
+        }
+
+        return true;
+        }
+
     public void  discardCard(ServerThread player, Card card) throws IOException {
 
+        player.setDiscaredCard(card);
         player.getHand().removeFromHand(card);
         player.addToDiscardPile(card);
         String [] cardEffect = null;
@@ -209,7 +317,21 @@ public class Game {
             server.sendMessageToOneClient(player, "Your " + player.getDiscardPileRepresentation());
             server.sendMessageToAllActivePlayersExceptOne(player, messageForEveryoneInRound);
             server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + "'s " + player.getDiscardPileRepresentation());
-        } else  if(card.getCardNumber() == 7) {
+        } else if(card.getCardNumber() == 7) {
+            String messageForOwnClient = cardEffect[0];
+            String messageForEveryoneInRound = cardEffect[1];
+            server.sendMessageToOneClient(player, messageForOwnClient);
+            server.sendMessageToOneClient(player, "Your " + player.getDiscardPileRepresentation());
+            server.sendMessageToAllActivePlayersExceptOne(player, messageForEveryoneInRound);
+            server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + "'s " + player.getDiscardPileRepresentation());
+        } else if(card.getCardNumber() == 2) {
+            String messageForOwnClient = cardEffect[0];
+            String messageForEveryoneInRound = cardEffect[1];
+            server.sendMessageToOneClient(player, messageForOwnClient);
+            server.sendMessageToOneClient(player, "Your " + player.getDiscardPileRepresentation());
+            server.sendMessageToAllActivePlayersExceptOne(player, messageForEveryoneInRound);
+            server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + "'s " + player.getDiscardPileRepresentation());
+        }else if(card.getCardNumber() == 6) {
             String messageForOwnClient = cardEffect[0];
             String messageForEveryoneInRound = cardEffect[1];
             server.sendMessageToOneClient(player, messageForOwnClient);
@@ -283,99 +405,6 @@ public class Game {
 
         startRound();
     }
-
-
-
-
-    public synchronized void getRoundWinner(){
-
-        int highestScore = 0;
-
-        // Determine highestScore of a hand and winner if no tie
-        for(ServerThread player : this.listOfActivePlayers){
-
-            if(player.getIsInRound() == true) {
-                if (player.getHand().getHandScore() > highestScore) {
-                    System.out.println(player.getName() + "'s HandScore: " + player.getHand().getHandScore());
-                    highestScore = player.getHand().getHandScore();
-                    this.roundWinner = player;
-                }
-            }
-        }
-
-        System.out.println("HighestScore: " + highestScore);
-
-
-        // fill HashMap of roundWinners
-        for(ServerThread player : this.listOfActivePlayers){
-
-            if(player.getIsInRound() == true && player.getHand().getHandScore() == highestScore){
-                addToRoundWinners(player, player.getHand().getHandScore());
-            }
-        }
-
-        // if there is a tie ...
-        if(getRoundWinnersMap().size() > 1){
-            server.sendMessageToAllActivePlayers("There is a tie! The sum of players' " +
-                                                 "hand scores and discard pile scores will decide the winner.");
-
-                 // update score in HashMap
-                for (ServerThread winner : getRoundWinnersMap().keySet()) {
-                    int score = 0;
-                    score = score + winner.getScoreOfDiscardPile() + winner.getHand().getHandScore();
-                    addToRoundWinners(winner, score);
-                    if (score > highestScore) {
-                        highestScore = score;
-                        this.roundWinner = winner;
-                    }
-                }
-                synchronized (this.roundWinners) {
-                    // remove nonWinners from HashMap
-                    for (ServerThread winner : getRoundWinnersMap().keySet()) {
-                        if (getFromMap(winner) != highestScore) {
-                            removeFromRoundWinners(winner);
-                        }
-                    }
-                }
-
-            // if there is still a tie everyone from HashMap wins
-                if(getRoundWinnersMap().size() > 1){
-
-                ArrayList<ServerThread> winners = new ArrayList<>(getRoundWinnersMap().size());
-                for(ServerThread winner : getRoundWinnersMap().keySet()){
-                    winner.addTokens();
-                    winner.setHasWonLastRound(true);
-                    winners.add(winner);
-                }
-
-                StringBuilder message = new StringBuilder("The winners in this round are ");
-                for(int i = 0; i < winners.size() - 1; i++){
-                    message.append(winners.get(i).getName() + ", ");
-                }
-                message.append(winners.getLast().getName());
-                for(ServerThread winner : winners){
-                    winner.addTokens();
-                    winner.setHasWonLastRound(true);
-                }
-                server.sendMessageToAllActivePlayers(String.valueOf(message));
-                this.roundWinner = null;
-                return;
-
-            }
-
-            // else there is one winner
-            this.roundWinner.addTokens();
-            this.roundWinner.setHasWonLastRound(true);
-            server.sendMessageToAllActivePlayers("The winner of this round is " + this.roundWinner.getName());
-            return;
-        }
-
-        this.roundWinner.addTokens();
-        this.roundWinner.setHasWonLastRound(true);
-        server.sendMessageToAllActivePlayers("The winner of this round is " + this.roundWinner.getName());
-    }
-
-
     public void startRound() {
 
         this.deck.setUp();
@@ -410,86 +439,185 @@ public class Game {
 
     }
 
-        //--------FullyImplementedAndWorkingMethods-----------------------
+    // Fully implemented methods --------------------------------------------------------------------------
+    private void reSortListOfActivePlayers(ServerThread initialPlayer){
 
-        public void takeInitialTurn(ServerThread player) {
+        List<ServerThread> firstSubList =
+                this.listOfActivePlayers.subList(this.listOfActivePlayers.indexOf(initialPlayer), this.listOfActivePlayers.size());
+        List<ServerThread> secondSubList = this.listOfActivePlayers.subList(0, this.listOfActivePlayers.indexOf(initialPlayer));
+        firstSubList.addAll(secondSubList);
+        ArrayList<ServerThread> temp = new ArrayList<>();
+        temp.addAll(firstSubList);
+        server.modifyActivePlayerList(temp);
+
+
+    }
+    public void takeInitialTurn(ServerThread player) {
 
         player.setIsOnTurn(true);
-        player.getHand().addToHand(deck.drawCard());
+        Card newCard = deck.drawCard();
+        player.getHand().addToHand(newCard);
+
+        if(newCard.getCardNumber() == 7){
+            player.setHasCountess(true);
+        }
+
         server.sendMessageToOneClient(player, "You drew a card.");
         server.sendMessageToAllActivePlayersExceptOne(player,player.getName() + " drew a card.");
         server.sendMessageToOneClient(player, player.getHand().toString());
         player.setIsOnTurn(false);
     }
-        private void reSortListOfActivePlayers(ServerThread initialPlayer){
 
-            List<ServerThread> firstSubList =
-                    this.listOfActivePlayers.subList(this.listOfActivePlayers.indexOf(initialPlayer), this.listOfActivePlayers.size());
-            List<ServerThread> secondSubList = this.listOfActivePlayers.subList(0, this.listOfActivePlayers.indexOf(initialPlayer));
-            firstSubList.addAll(secondSubList);
-            ArrayList<ServerThread> temp = new ArrayList<>();
-            temp.addAll(firstSubList);
-            server.modifyActivePlayerList(temp);
-
-
-        }
-        private ServerThread getInitialPlayer(){
+    private ServerThread getInitialPlayer(){
 
         ServerThread initialPlayer = null;
 
-                if(roundWinners.size() == 1) {
-                    initialPlayer = this.roundWinner;
-                    server.sendMessageToOneClient(initialPlayer, "You won in the last round. Now it's your turn to go first in this round.");
-                    server.sendMessageToAllActivePlayersExceptOne(initialPlayer, initialPlayer.getName() + " won the last round. Now " + initialPlayer.getName() + " goes first.");
+        if(roundWinners.size() == 1) {
+            initialPlayer = this.roundWinner;
+            server.sendMessageToOneClient(initialPlayer, "You won in the last round. Now it's your turn to go first in this round.");
+            server.sendMessageToAllActivePlayersExceptOne(initialPlayer, initialPlayer.getName() + " won the last round. Now " + initialPlayer.getName() + " goes first.");
 
+            return initialPlayer;
+        }
+
+        if(roundWinners.size() < 1) {
+
+            for (ServerThread player : listOfActivePlayers) {
+                if (player.getDaysSinceLastDate() == getLowestDaysSinceDate()) {
+                    initialPlayer = player;
+                    server.sendMessageToOneClient(player, "You had recently a date. Now it's your turn to go first in this round.");
+                    server.sendMessageToAllActivePlayersExceptOne(player, player.getName() +
+                                                                          " had recently a date. Now " + player.getName() + " goes first.");
                     return initialPlayer;
                 }
 
-                if(roundWinners.size() < 1) {
-
-                    for (ServerThread player : listOfActivePlayers) {
-                        if (player.getDaysSinceLastDate() == getLowestDaysSinceDate()) {
-                            initialPlayer = player;
-                            server.sendMessageToOneClient(player, "You had recently a date. Now it's your turn to go first in this round.");
-                            server.sendMessageToAllActivePlayersExceptOne(player, player.getName() +
-                                                                                  " had recently a date. Now " + player.getName() + " goes first.");
-                            return initialPlayer;
-                        }
-
-                    }
-                }
-
-                if(roundWinners.size() > 1){
-
-                    for(ServerThread player : listOfActivePlayers){
-
-                        if (player.getHasWonLastRound() && player.getDaysSinceLastDate() == getLowestDaysSinceDate()) {
-                            initialPlayer = player;
-                            server.sendMessageToOneClient(player, " You won in the last round and you had recently a date. Now it's your turn to go first in this round.");
-                            server.sendMessageToAllActivePlayersExceptOne(player, player.getName() +
-                                                                                  " won the last round and had recently a date. Now " + player.getName() + " goes first.");
-                            return initialPlayer;
-                        }
-
-                    }
-
-                }
-
-            return initialPlayer;
             }
+        }
 
-        private int getLowestDaysSinceDate(){
+        if(roundWinners.size() > 1){
 
-            int minDaysSinceLastDate = 400;
-            for (ServerThread client : server.getActivePlayersList()) {
+            for(ServerThread player : listOfActivePlayers){
 
-                if (client.getDaysSinceLastDate() < minDaysSinceLastDate) {
-                    minDaysSinceLastDate = client.getDaysSinceLastDate();
+                if (player.getHasWonLastRound() && player.getDaysSinceLastDate() == getLowestDaysSinceDate()) {
+                    initialPlayer = player;
+                    server.sendMessageToOneClient(player, " You won in the last round and you had recently a date. Now it's your turn to go first in this round.");
+                    server.sendMessageToAllActivePlayersExceptOne(player, player.getName() +
+                                                                          " won the last round and had recently a date. Now " + player.getName() + " goes first.");
+                    return initialPlayer;
                 }
-            }
 
-            return minDaysSinceLastDate;
+            }
 
         }
+
+        return initialPlayer;
+    }
+    private int getLowestDaysSinceDate(){
+
+        int minDaysSinceLastDate = 400;
+        for (ServerThread client : server.getActivePlayersList()) {
+
+            if (client.getDaysSinceLastDate() < minDaysSinceLastDate) {
+                minDaysSinceLastDate = client.getDaysSinceLastDate();
+            }
+        }
+
+        return minDaysSinceLastDate;
+
+    }
+
+    public synchronized void getRoundWinner(){
+
+            int highestScore = 0;
+
+            // Determine highestScore of a hand and winner if no tie
+            for(ServerThread player : this.listOfActivePlayers){
+
+                if(player.getIsInRound() == true) {
+                    if (player.getHand().getHandScore() > highestScore) {
+                        System.out.println(player.getName() + "'s HandScore: " + player.getHand().getHandScore());
+                        highestScore = player.getHand().getHandScore();
+                        this.roundWinner = player;
+                    }
+                }
+            }
+
+            System.out.println("HighestScore: " + highestScore);
+
+
+            // fill HashMap of roundWinners
+            for(ServerThread player : this.listOfActivePlayers){
+
+                if(player.getIsInRound() == true && player.getHand().getHandScore() == highestScore){
+                    addToRoundWinners(player, player.getHand().getHandScore());
+                }
+            }
+
+            // if there is a tie ...
+            if(getRoundWinnersMap().size() > 1){
+                server.sendMessageToAllActivePlayers("There is a tie! The sum of players' " +
+                                                     "hand scores and discard pile scores will decide the winner.");
+
+                // update score in HashMap
+                for (ServerThread winner : getRoundWinnersMap().keySet()) {
+                    int score = 0;
+                    score = score + winner.getScoreOfDiscardPile() + winner.getHand().getHandScore();
+                    addToRoundWinners(winner, score);
+                    if (score > highestScore) {
+                        highestScore = score;
+                        this.roundWinner = winner;
+                    }
+                }
+                synchronized (this.roundWinners) {
+                    // remove nonWinners from HashMap
+                    for (ServerThread winner : getRoundWinnersMap().keySet()) {
+                        if (getFromMap(winner) != highestScore) {
+                            removeFromRoundWinners(winner);
+                        }
+                    }
+                }
+
+                // if there is still a tie everyone from HashMap wins
+                if(getRoundWinnersMap().size() > 1){
+
+                    ArrayList<ServerThread> winners = new ArrayList<>(getRoundWinnersMap().size());
+                    for(ServerThread winner : getRoundWinnersMap().keySet()){
+                        winner.addTokens();
+                        winner.setHasWonLastRound(true);
+                        winners.add(winner);
+                    }
+
+                    StringBuilder message = new StringBuilder("The winners in this round are ");
+                    for(int i = 0; i < winners.size() - 1; i++){
+                        message.append(winners.get(i).getName() + ", ");
+                    }
+                    message.append(winners.getLast().getName());
+                    for(ServerThread winner : winners){
+                        winner.addTokens();
+                        winner.setHasWonLastRound(true);
+                    }
+                    server.sendMessageToAllActivePlayers(String.valueOf(message));
+                    this.roundWinner = null;
+                    return;
+
+                }
+
+                // else there is one winner
+                this.roundWinner.addTokens();
+                this.roundWinner.setHasWonLastRound(true);
+                server.sendMessageToAllActivePlayers("The winner of this round is " + this.roundWinner.getName());
+                return;
+            }
+
+            this.roundWinner.addTokens();
+            this.roundWinner.setHasWonLastRound(true);
+            server.sendMessageToAllActivePlayers("The winner of this round is " + this.roundWinner.getName());
+        }
+
+
+
+
+
+
 }
 

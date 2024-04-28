@@ -14,9 +14,14 @@ public class Priest extends Card {
 
     @Override
     public String[] applyCardEffect(ServerThread player) throws IOException {
+        String [] cardEffect = new String[2];
+        game.checkSelectable(player);
 
-        // not implemented
-        return null;
+        cardEffect[0] = "You played the card 'Priest'. Choose a player and secretly look at his or her hand of cards.\n"
+                        + game.printSelectable() + "\nType $name to choose a player.";
+        cardEffect[1] = player.getName() + " played the card 'Priest'. "+
+                        player.getName() +" will choose a player and secretly look at his or her hand of cards.";
+        return cardEffect;
     }
 
     @Override

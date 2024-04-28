@@ -30,13 +30,16 @@ public class ServerThread extends Thread {
     private boolean isInRound;
     private boolean wonLastRound;
     private boolean isOnTurn;
-    private Card playedCard;
     private int daysSinceLastDate;
     private String receivedCard;
+    private String nameOfChosenPlayer;
 
     private boolean hasCountess;
+    private boolean isProtected;
 
-    private boolean hasPlayedCard;
+    private Card discaredCard;
+    private ServerThread selectedPlayer;
+
     private static Random randomGenerator = new Random();
 
 //--------------------------------------------------------------------------------------------------------
@@ -62,12 +65,26 @@ public class ServerThread extends Thread {
         this.isInRound = false;
         this.wonLastRound = false;
         this.isOnTurn = false;
-        this.playedCard = null;
         this.daysSinceLastDate = randomGenerator.nextInt(366);
         this.receivedCard = null;
-        this.hasPlayedCard = false;
+        this.nameOfChosenPlayer = null;
         this.hasCountess = false;
+        this.isProtected = false;
+        this.discaredCard = null;
+        this.selectedPlayer = null;
 
+    }
+
+    public ArrayList<Card> getDiscardPile(){
+        return this.discardPile;
+    }
+
+    public Card getDiscaredCard(){
+        return this.discaredCard;
+    }
+
+    public void setDiscaredCard(Card card){
+        this.discaredCard = card;
     }
 
     public boolean getHasCountess(){
@@ -76,6 +93,22 @@ public class ServerThread extends Thread {
 
     public void setHasCountess(boolean value){
         this.hasCountess = value;
+    }
+
+    public boolean getIsProtected(){
+        return this.isProtected;
+    }
+
+    public void setIsProtected(boolean value){
+        this.isProtected = value;
+    }
+
+    public String getNameOfChosenPlayer(){
+        return this.nameOfChosenPlayer;
+    }
+
+    public ServerThread getSelectedPlayer(){
+        return this.selectedPlayer;
     }
 
     @Override
@@ -175,6 +208,9 @@ public class ServerThread extends Thread {
     public Hand getHand(){
         return this.hand;
     }
+    public void setHand(Hand hand){
+        this.hand = hand;
+    }
 
     public void addTokens(){
         this.tokens = this.tokens + 1;
@@ -213,31 +249,36 @@ public class ServerThread extends Thread {
 //----------------------------------------------------------------------------------------------------------
     public void sendingGameMessage(String receivedMessage){
 
-        if(receivedMessage.substring(1).equals("joinGame")){
+        String receivedCommand = receivedMessage.substring(1);
+
+        if(receivedCommand.equals("joinGame")){
 
             server.joinGame(this);
 
-        }else if (receivedMessage.substring(1).equals("exitGame")){
+        }else if (receivedCommand.equals("exitGame")){
 
             server.getGame().knockOutOfRound(this);
             server.exitGame(this);
 
-        }else if(receivedMessage.substring(1).equals("startGame")){
+        }else if(receivedCommand.equals("startGame")){
 
             server.starGame(this);
 
-        }else if(receivedMessage.substring(1).equals("help")){
+        }else if(receivedCommand.equals("help")){
 
             printCardDescription();
 
-        } else if(receivedMessage.substring(1).equals("card1")){
+        } else if(receivedCommand.equals("card1")){
 
             receiveCard("card1");
 
-        } else if(receivedMessage.substring(1).equals("card2")){
+        } else if(receivedCommand.equals("card2")){
 
             receiveCard("card2");
 
+        } else if(server.getNames().contains(receivedCommand)){
+
+            receiveName(receivedCommand);
 
         }else {
 
@@ -247,22 +288,53 @@ public class ServerThread extends Thread {
 
     }
 
-    private void receiveCard(String receivedCard){
-        if(!server.getActivePlayerList().contains(this)){
+
+    private void receiveName(String receivedCommand) {
+
+        if (!server.getActivePlayerList().contains(this)) {
             server.sendMessageToOneClient(this, "You cannot use this game command when you are not playing.");
-        } else if(this.isOnTurn ==false) {
+        } else if (this.isOnTurn == false) {
+
+            server.sendMessageToOneClient(this, "It's not your turn! You cannot select a player.");
+        } else {
+
+            this.nameOfChosenPlayer = receivedCommand;
+            boolean playedSelection = server.getGame().playSelection(this);
+
+            if (playedSelection == false) {
+                server.getGame().checkSelectable(this);
+                String message = "You have selected an unselectable player. Please try again.\n"
+                                 + server.getGame().printSelectable();
+                server.sendMessageToOneClient(this, message);
+
+            }
+
+        }
+    }
+
+    private void receiveCard(String receivedCard) {
+        if (!server.getActivePlayerList().contains(this)) {
+            server.sendMessageToOneClient(this, "You cannot use this game command when you are not playing.");
+        } else if (this.isOnTurn == false) {
 
             server.sendMessageToOneClient(this, "It's not your turn! You cannot discard a card right now.");
-        }else{
+        } else {
 
             this.receivedCard = receivedCard;
 
             server.getGame().playCard(this);
-            if (!server.getGame().getDeck().IsDeckEmpty()) {
-                server.getGame().passTurn(this);
-            } else {
-                server.getGame().endRound();
+
+            if (this.isOnTurn == false) {
+
+                if (!server.getGame().getDeck().IsDeckEmpty()) {
+                    server.getGame().passTurn(this);
+                } else {
+                    server.getGame().endRound();
+                }
+
             }
+
+
         }
     }
 

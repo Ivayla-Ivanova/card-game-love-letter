@@ -90,7 +90,7 @@ public class Hand {
     public String toString() {
 
         if(this.card1 == null && this.card2 == null){
-            return "This hand is empty.";
+            return "Hand is empty";
         }
 
         if(this.card2 == null){
