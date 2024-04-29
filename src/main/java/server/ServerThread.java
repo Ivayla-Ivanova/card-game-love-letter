@@ -307,8 +307,12 @@ public class ServerThread extends Thread {
             boolean playedSelection = server.getGame().playSelection(this);
 
             if (playedSelection == false) {
+
                 server.getGame().checkSelectable(this);
-                String message = "You have selected an unselectable player. Please try again.\n"
+                if(server.getGame().getSelectableList().size() < 2){
+                    server.getGame().playSelection(this);
+                }
+                String message = "You have selected an unselectable player. \n"
                                  + server.getGame().printSelectable();
                 server.sendMessageToOneClient(this, message);
 

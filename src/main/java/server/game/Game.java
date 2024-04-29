@@ -24,7 +24,7 @@ public class Game {
     private ServerThread gameWinner;
     private ArrayList<ServerThread> gameWinners;
     private ConcurrentHashMap<ServerThread, Boolean> playerInRound;
-    private ArrayList<ServerThread> selectable;
+    private ArrayList<ServerThread> selectableList;
 
     //------------------------------------------------------------------------------------------------------
     private Game(Server server, ArrayList<ServerThread> activePlayers) {
@@ -46,7 +46,7 @@ public class Game {
         this.gameWinner = null;
         this.gameWinners = new ArrayList<>();
         this.playerInRound = new ConcurrentHashMap<>();
-        this.selectable = new ArrayList<>();
+        this.selectableList = new ArrayList<>();
 
         if(server.getActivePlayerList().size() == 2){
             this.numberOfTokensToWin = 7;
@@ -74,6 +74,10 @@ public class Game {
 
     public Deck getDeck(){
         return this.deck;
+    }
+
+    public synchronized ArrayList<ServerThread> getSelectableList(){
+        return this.selectableList;
     }
 
     //---------------RoundWinnersMethods-------------------------------------------------------------------------------------------
@@ -329,15 +333,15 @@ public class Game {
 
         }
 
-        this.selectable = selectable;
+        this.selectableList = selectable;
     }
     public String printSelectable(){
 
         StringBuilder message = new StringBuilder("Selectable players: ");
-        for(int i = 0; i < this.selectable.size() - 1; i++){
-            message.append(this.selectable.get(i).getName() + ", ");
+        for(int i = 0; i < this.selectableList.size() - 1; i++){
+            message.append(this.selectableList.get(i).getName() + ", ");
         }
-        message.append(this.selectable.get(this.selectable.size()- 1).getName() + ".");
+        message.append(this.selectableList.get(this.selectableList.size() - 1).getName() + ".");
 
         return String.valueOf(message);
 
@@ -356,6 +360,11 @@ public class Game {
         player.addToDiscardPile(card);
         String [] cardEffect = null;
         cardEffect = card.applyCardEffect(player);
+        if(card.getCardNumber() == 2 || card.getCardNumber() == 6 || card.getCardNumber() == 3){
+            if(selectableList.size() < 2){
+                playSelection(player);
+            }
+        }
 
         if(card.getCardNumber() == 8){
             String messageForOwnClient  = cardEffect[0];
@@ -446,9 +455,26 @@ public class Game {
 
         ServerThread selected = null;
 
-        for (ServerThread selectable : this.selectable) {
-            if (selectable.getName().equals(player.getNameOfChosenPlayer())) {
-                selected = selectable;
+        if(selectableList.size() == 1){
+            selected = selectableList.getFirst();
+        } else if(selectableList.size() < 1) {
+
+            player.setIsOnTurn(false);
+
+            if (deck.IsDeckEmpty() == false) {
+                server.getGame().passTurn(player);
+            } else {
+                server.getGame().endRound();
+            }
+
+            player.setPlayedSelection(true);
+            return true;
+        } else{
+
+            for (ServerThread selectable : this.selectableList) {
+                if (selectable.getName().equals(player.getNameOfChosenPlayer())) {
+                    selected = selectable;
+                }
             }
         }
 

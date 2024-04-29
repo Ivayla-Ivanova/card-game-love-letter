@@ -17,6 +17,18 @@ public class King extends Card{
 
         String [] cardEffect = new String[2];
         game.checkSelectable(player);
+        if(game.getSelectableList().size() ==  1){
+            cardEffect[0] = "You played the card 'King'. You are trading your card with the card of another player.";
+            cardEffect[1] = player.getName() + " played the card 'King' and has traded his or her card with the card of another player.";
+            return cardEffect;
+        }
+
+        if(game.getSelectableList().isEmpty()){
+
+            cardEffect[0] = "You played the card 'King'. This card is discarded without any effect.";
+            cardEffect[1] = player.getName() + " played the card 'King'. This card is discarded without any effect.";
+            return cardEffect;
+        }
 
         cardEffect[0] = "You played the card 'King'. Choose a player and trade your card with his or her card.\n"
                         + game.printSelectable() + "\nType $name to choose a player.";
