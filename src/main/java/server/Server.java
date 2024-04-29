@@ -21,11 +21,16 @@ public class Server {
     private Game game;
     private boolean hasGameStarted;
 
+    private Thread mainThread;
+
+
+
     //---------------------------------------------------------------------------------------------------------
 
     // Constructor for a Singleton instance
     private Server() {
 
+        mainThread = Thread.currentThread();
         this.names = new HashSet<>();
         this.activePlayerCount = 0;
         this.activePlayersList = new ArrayList<>();
@@ -89,11 +94,9 @@ public class Server {
     public synchronized ArrayList<ServerThread> getActivePlayerList(){
         return this.activePlayersList;
     }
-
     public synchronized void setHasGameStarted(boolean value){
         this.hasGameStarted = value;
     }
-
 
     //------------------Add/RemoveMethods------------------------------------------------------------------
     public synchronized void addToMap(ServerThread serverThread){
@@ -109,13 +112,9 @@ public class Server {
         this.serverThreads.add(client);
 
     }
-
     public synchronized void removeName(String name){
         names.remove(name);
     }
-
-
-
 
     //--------------------MessageMethods-----------------------------------------------------------------------
 

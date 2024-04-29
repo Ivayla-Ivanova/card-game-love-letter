@@ -17,11 +17,14 @@ public class King extends Card{
 
         String [] cardEffect = new String[2];
         game.checkSelectable(player);
+        /*
         if(game.getSelectableList().size() ==  1){
             cardEffect[0] = "You played the card 'King'. You are trading your card with the card of another player.";
             cardEffect[1] = player.getName() + " played the card 'King' and has traded his or her card with the card of another player.";
             return cardEffect;
         }
+
+         */
 
         if(game.getSelectableList().isEmpty()){
 

@@ -203,11 +203,14 @@ public class ServerThread extends Thread {
         return this.daysSinceLastDate;
     }
 
-    public void setIsOnTurn(boolean value){
+    public void setIsOnTurn(Thread call ,boolean value){
         this.isOnTurn = value;
+        System.out.println(this.getName() + " setIsOnTurn: " + value + " by " + call.getName());
     }
-    public boolean getIsOnTurn(){
+    public boolean getIsOnTurn(Thread call){
+        System.out.println(this.getName() + " getIsOnTurn: " + this.isOnTurn + " was called by " + call.getName());
         return this.isOnTurn;
+
     }
 
     public Hand getHand(){
@@ -296,6 +299,7 @@ public class ServerThread extends Thread {
 
     private void receiveName(String receivedCommand) {
 
+        // Bad user input
         if (!server.getActivePlayerList().contains(this)) {
             server.sendMessageToOneClient(this, "You cannot use this game command when you are not playing.");
         } else if (this.isOnTurn == false) {
@@ -306,12 +310,13 @@ public class ServerThread extends Thread {
             this.nameOfChosenPlayer = receivedCommand;
             boolean playedSelection = server.getGame().playSelection(this);
 
-            if (playedSelection == false) {
+            if (!playedSelection) {
 
                 server.getGame().checkSelectable(this);
                 if(server.getGame().getSelectableList().size() < 2){
                     server.getGame().playSelection(this);
                 }
+
                 String message = "You have selected an unselectable player. \n"
                                  + server.getGame().printSelectable();
                 server.sendMessageToOneClient(this, message);
@@ -333,15 +338,13 @@ public class ServerThread extends Thread {
 
             server.getGame().playCard(this);
 
+
             if (this.isOnTurn == false) {
 
-                if (!server.getGame().getDeck().IsDeckEmpty()) {
-                    server.getGame().passTurn(this);
-                } else {
-                    server.getGame().endRound();
-                }
+                server.getGame().checkMoveOn(this);
 
             }
+
 
 
         }
