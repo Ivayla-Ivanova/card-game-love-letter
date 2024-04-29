@@ -17,8 +17,6 @@ public class Deck {
 
     Random random;
 
-
-
     private Card[] nextThreeTopCards;
 
     private Deck(Game game) {
@@ -38,25 +36,6 @@ public class Deck {
     }
 
     public void setUp(){
-
-        /*
-        cardDeck[0] = new Guard();
-        cardDeck[1] = new Guard();
-        cardDeck[2] = new Guard();
-        cardDeck[3] = new Guard();
-        cardDeck[4] = new Guard();
-        cardDeck[5] = new Guard();
-        cardDeck[6] = new Guard();
-        cardDeck[7] = new Guard();
-        cardDeck[8] = new Guard();
-        cardDeck[9] = new Guard();
-        cardDeck[10] = new Guard();
-        cardDeck[11] = new Guard();
-        cardDeck[12] = new Guard();
-        cardDeck[13] = new Guard();
-        cardDeck[14] = new Guard();
-        cardDeck[15] = new Guard();
-        */
 
         cardDeck[0] = new Princess(game);
         cardDeck[1] = new Countess(game);

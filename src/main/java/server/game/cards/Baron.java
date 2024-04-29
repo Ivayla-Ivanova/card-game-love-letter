@@ -15,8 +15,14 @@ public class Baron extends Card{
     @Override
     public String [] applyCardEffect(ServerThread player) throws IOException {
 
-        //not implemented
-        return null;
+        String [] cardEffect = new String[2];
+        game.checkSelectable(player);
+
+        cardEffect[0] = "You played the card 'Baron'. Choose a player and secretly compare hands with another player; lower number is out.\n"
+                        + game.printSelectable() + "\nType $name to choose a player.";
+        cardEffect[1] = player.getName() + " played the card 'Baron'. "+
+                        player.getName() +" will choose a player and secretly compare hands; lowe number is out.";
+        return cardEffect;
     }
 
     @Override
