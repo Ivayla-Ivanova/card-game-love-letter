@@ -15,8 +15,15 @@ public class Handmaid extends Card{
     @Override
     public String [] applyCardEffect(ServerThread player) throws IOException {
 
-        //not implemented
-        return null;
+        String [] cardEffect = new String[2];
+
+        player.setIsProtected(true);
+
+        cardEffect[0] = "You played the card 'Handmaid'. " +
+                "You are now protected against the effects of other played cards until your next turn.";
+        cardEffect[1] = player.getName() + " played the card 'Handmaid'. " +
+        player.getName() + " is now protected against the effects of other played cards until his or her next turn.";
+        return cardEffect;
     }
 
     @Override

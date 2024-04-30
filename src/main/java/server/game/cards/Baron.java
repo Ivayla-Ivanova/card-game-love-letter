@@ -28,7 +28,7 @@ public class Baron extends Card{
 
         if(game.getSelectableList().isEmpty()){
 
-            cardEffect[0] = "You played the card 'Baron'. This card is discarded without any effect.";
+            cardEffect[0] = "You played the card 'Baron'. This card is discarded without any effect. Type any player $name to end your turn.";
             cardEffect[1] = player.getName() + " played the card 'Baron'. This card is discarded without any effect. ";
             return cardEffect;
         }

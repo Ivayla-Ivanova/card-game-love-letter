@@ -133,7 +133,7 @@ public class Game {
 
         for(ServerThread activePlayer : listOfActivePlayers){
 
-            if(activePlayer == player){
+            if(activePlayer == player && player.getHasDiscardedPrince() == false){
                 continue;
             }
 
@@ -179,7 +179,8 @@ public class Game {
     private void  discardCard(ServerThread player, Card card) throws IOException {
 
         // Player Selection muss take place
-        if(card.getCardNumber() == 2 || card.getCardNumber() == 6 || card.getCardNumber() == 3){
+        if(card.getCardNumber() == 2 || card.getCardNumber() == 6 || card.getCardNumber() == 3 ||
+        card.getCardNumber() == 5 || card.getCardNumber() == 1){
             player.setPlayedSelection(false);
         }
 
@@ -189,25 +190,13 @@ public class Game {
         String [] cardEffect = null;
         cardEffect = card.applyCardEffect(player);
 
-        //Print discarded card message
-        if(card.getCardNumber() == 8 ||
-                card.getCardNumber() == 7 ||
-                card.getCardNumber() == 6 ||
-                card.getCardNumber() == 3 ||
-                card.getCardNumber() == 2){
-            String messageForOwnClient  = cardEffect[0];
-            String messageForEveryoneInRound = cardEffect[1];
-            server.sendMessageToOneClient(player, messageForOwnClient);
-            server.sendMessageToOneClient(player, "Your " + player.getDiscardPileRepresentation());
-            server.sendMessageToAllActivePlayersExceptOne(player, messageForEveryoneInRound);
-            server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + "'s " + player.getDiscardPileRepresentation());
-        }else {
-            server.sendMessageToOneClient(player, "You discarded " + card.toString() + ".");
-            server.sendMessageToOneClient(player, "Your " + player.getDiscardPileRepresentation());
-            server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + " discarded " + card.toString());
-            server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + "'s " + player.getDiscardPileRepresentation());
-            server.sendMessageToOneClient(player, "Your " + player.getHand().toString());
-        }
+        String messageForOwnClient  = cardEffect[0];
+        String messageForEveryoneInRound = cardEffect[1];
+        server.sendMessageToOneClient(player, messageForOwnClient);
+        server.sendMessageToOneClient(player, "Your " + player.getDiscardPileRepresentation());
+        server.sendMessageToAllActivePlayersExceptOne(player, messageForEveryoneInRound);
+        server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + "'s " + player.getDiscardPileRepresentation());
+
 
 
         //If players in round < 2 select a player automatically
@@ -225,7 +214,7 @@ public class Game {
     public void playCard(ServerThread player){
 
         // $card1 or $card1 was send from the user, $name was expected
-        if(player.getPlayedSelection()==false){
+        if(player.getPlayedSelection()==false || player.getHasChosenNumber() == false){
             server.sendMessageToOneClient(player, "You cannot use this game command right now.");
             return;
         }
@@ -283,13 +272,44 @@ public class Game {
             return false;
         }
 
-        if(card.getCardNumber() == 2 || card.getCardNumber() == 3 || card.getCardNumber() == 6){
+        if(card.getCardNumber() == 2 || card.getCardNumber() == 3 ||
+                card.getCardNumber() == 6 || card.getCardNumber() == 5 ||
+        card.getCardNumber() == 1){
             return true;
         }
         return false;
 
     }
+
+    public void playNumber(ServerThread selected, int number){
+
+        if(selected.getHand().getCard1() != null){
+
+            if(selected.getHand().getCard1().getCardNumber() == number){
+                this.knockOutOfRound(selected);
+                server.sendMessageToOneClient(selected,"You are kicked out of the round.");
+                server.sendMessageToAllActivePlayersExceptOne(selected, selected.getName() + " was kicked out of the round.");
+                return;
+            }
+        }
+
+        if(selected.getHand().getCard2() != null){
+
+            if(selected.getHand().getCard2().getCardNumber() == number){
+                this.knockOutOfRound(selected);
+                server.sendMessageToOneClient(selected,"You are kicked out of the round.");
+                server.sendMessageToAllActivePlayersExceptOne(selected, selected.getName() + " was kicked out of the round.");
+                return;
+            }
+        }
+
+    }
     public boolean playSelection(ServerThread player) {
+
+        if(player.getDiscaredCard().getCardNumber() == 1 && player.getHasChosenNumber() == false){
+            server.sendMessageToOneClient(player, "First pick a number.");
+            return false;
+        }
 
         ServerThread selected = null;
         checkSelectable(player);
@@ -297,7 +317,7 @@ public class Game {
         //If players in round < 2 select a player automatically
         if(selectableList.size() == 1){
             selected = selectableList.getFirst();
-        } else if(selectableList.size() < 1) {
+        } else if(selectableList.isEmpty()) {
 
             player.setPlayedSelection(true);
             player.setIsOnTurn(Thread.currentThread(),false);
@@ -372,6 +392,57 @@ public class Game {
             }
         }
 
+        //Implementation of the card effect of 'Prince'
+        if(player.getDiscaredCard().getCardNumber() == 5){
+
+            Card discardedCard = selected.getHand().discardHand();
+            selected.addToDiscardPile(discardedCard);
+            selected.getHand().clearHand();
+
+            if(discardedCard.getCardNumber() == 8){
+
+                String [] cardEffect = null;
+                try {
+                    cardEffect = discardedCard.applyCardEffect(selected);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                String messageForOwnClient  = cardEffect[0];
+                String messageForEveryoneInRound = cardEffect[1];
+                server.sendMessageToOneClient(selected, messageForOwnClient);
+                server.sendMessageToOneClient(selected, "Your " + selected.getDiscardPileRepresentation());
+                server.sendMessageToAllActivePlayersExceptOne(selected, messageForEveryoneInRound);
+                server.sendMessageToAllActivePlayersExceptOne(selected, selected.getName() + "'s " + selected.getDiscardPileRepresentation());
+            } else{
+                server.sendMessageToOneClient(selected, "You discarded " + discardedCard.toString() + ".");
+                server.sendMessageToOneClient(selected, "Your " + selected.getDiscardPileRepresentation());
+                server.sendMessageToAllActivePlayersExceptOne(selected, selected.getName() + " discarded " + discardedCard.toString());
+                server.sendMessageToAllActivePlayersExceptOne(selected, selected.getName() + "'s " + selected.getDiscardPileRepresentation());
+                server.sendMessageToOneClient(selected, "Your " + selected.getHand().toString());
+            }
+
+            Card newCard;
+            if(deck.IsDeckEmpty() == false){
+               newCard = deck.drawCard();
+            } else {
+                newCard = deck.getTopCard();
+            }
+            selected.getHand().addToHand(newCard);
+            server.sendMessageToOneClient(selected, "You drew a card.");
+            server.sendMessageToAllActivePlayersExceptOne(selected, selected.getName() + " drew a card.");
+            server.sendMessageToOneClient(selected, selected.getHand().toString());
+
+
+        }
+
+        if(player.getDiscaredCard().getCardNumber() == 1){
+
+           int number =  player.getChosenNumber();
+
+           playNumber(selected, number);
+
+        }
+
         player.setPlayedSelection(true);
         player.setIsOnTurn(Thread.currentThread(),false);
         System.out.println("Call was from playSelection2.");
@@ -392,6 +463,8 @@ public class Game {
     private void takeInitialTurn(ServerThread player) {
 
         player.setIsOnTurn(Thread.currentThread(),true);
+        player.setIsProtected(false);
+        player.setHasDiscardedPrince(false);
         System.out.println("Call was from takeInitialTurn.");
         Card newCard = deck.drawCard();
         player.getHand().addToHand(newCard);
@@ -409,6 +482,8 @@ public class Game {
     private void takeTurn(ServerThread player) throws IOException {
 
         player.setIsOnTurn(Thread.currentThread(),true);
+        player.setIsProtected(false);
+        player.setHasDiscardedPrince(false);
         System.out.println("Call was from takeTurn1.");
         Card newCard = deck.drawCard();
         player.getHand().addToHand(newCard);
@@ -420,16 +495,32 @@ public class Game {
         if(newCard.getCardNumber() == 7){
             player.setHasCountess(true);
             System.out.println(player.getName() + " drew the card 'Countess'.");
-            if(player.getHand().getCard1().getCardNumber() == 5 ||
-                    player.getHand().getCard2().getCardNumber() == 6){
-                discardCard(player, newCard);
-                player.setHasCountess(false);
+            if(player.getHand().getCard1() != null) {
+                if (player.getHand().getCard1().getCardNumber() == 5 ||
+                        player.getHand().getCard1().getCardNumber() == 6) {
+                    discardCard(player, newCard);
+                    player.setHasCountess(false);
 
-                player.setIsOnTurn(Thread.currentThread(),false);
-                System.out.println("Call was from takeTurn2.");
-                checkMoveOn(player);
-                return;
+                    player.setIsOnTurn(Thread.currentThread(), false);
+                    System.out.println("Call was from takeTurn2.");
+                    checkMoveOn(player);
+                    return;
+                }
             }
+
+            if(player.getHand().getCard2() != null) {
+                if (player.getHand().getCard2().getCardNumber() == 5 ||
+                        player.getHand().getCard2().getCardNumber() == 6) {
+                    discardCard(player, newCard);
+                    player.setHasCountess(false);
+
+                    player.setIsOnTurn(Thread.currentThread(), false);
+                    System.out.println("Call was from takeTurn2.");
+                    checkMoveOn(player);
+                    return;
+                }
+            }
+
         }
 
         // If the new card is 'King' or 'Prince' and the old card is 'Countess'
@@ -443,6 +534,7 @@ public class Game {
                     player.setIsOnTurn(Thread.currentThread(),false);
                     System.out.println("Call was from takeTurn3.");
                     checkMoveOn(player);
+                    return;
                 }
 
                 if (player.getHand().getCard2().getCardNumber() == 7) {
@@ -452,9 +544,8 @@ public class Game {
                     player.setIsOnTurn(Thread.currentThread(),false);
                     System.out.println("Call was from takeTurn4.");
                     checkMoveOn(player);
-
+                    return;
                 }
-                return;
             }
         }
 

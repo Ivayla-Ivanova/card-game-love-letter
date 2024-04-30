@@ -40,6 +40,11 @@ public class ServerThread extends Thread {
     private Card discaredCard;
     private boolean playedSelection;
 
+    private boolean hasDiscardedPrince;
+
+    private int chosenNumber;
+    private boolean hasChosenNumber;
+
     private static Random randomGenerator = new Random();
 
 //--------------------------------------------------------------------------------------------------------
@@ -72,7 +77,30 @@ public class ServerThread extends Thread {
         this.isProtected = false;
         this.discaredCard = null;
         this.playedSelection = true;
+        this.hasDiscardedPrince = false;
+        this.chosenNumber = 0;
+        this.hasChosenNumber = true;
 
+    }
+
+    public int getChosenNumber(){
+        return this.chosenNumber;
+    }
+
+    public boolean getHasChosenNumber(){
+        return this.hasChosenNumber;
+    }
+
+    public void setHasChosenNumber(boolean value){
+        this.hasChosenNumber = value;
+    }
+
+    public boolean getHasDiscardedPrince(){
+        return this.hasDiscardedPrince;
+    }
+
+    public void setHasDiscardedPrince(boolean value){
+        this.hasDiscardedPrince = value;
     }
 
     public boolean getPlayedSelection(){
@@ -258,6 +286,13 @@ public class ServerThread extends Thread {
     public void sendingGameMessage(String receivedMessage){
 
         String receivedCommand = receivedMessage.substring(1);
+        int receivedNumber = 0;
+        try {
+            receivedNumber = Integer.parseInt(receivedCommand);
+        } catch (NumberFormatException e) {
+            System.out.println("The received command is not an integer.");
+        }
+
 
         if(receivedCommand.equals("joinGame")){
 
@@ -288,10 +323,34 @@ public class ServerThread extends Thread {
 
             receiveName(receivedCommand);
 
+        }else if(receivedNumber != 0){
+
+            receiveNumber(receivedNumber);
+
         }else {
 
             String sendMessage = "You have entered an invalid game command. Please try again.";
             server.sendMessageToOneClient(this, sendMessage);
+        }
+
+    }
+
+    private void receiveNumber(int number){
+
+        // Bad user input
+        if (!server.getActivePlayerList().contains(this)) {
+            server.sendMessageToOneClient(this, "You cannot use this game command when you are not playing.");
+        } else if (this.isOnTurn == false) {
+
+            server.sendMessageToOneClient(this, "It's not your turn! You cannot select a player.");
+        } else if(number < 2 || number > 8){
+            server.sendMessageToOneClient(this, "Wrong number! Try again.");
+        }
+        else {
+
+            this.chosenNumber = number;
+            this.hasChosenNumber = true;
+
         }
 
     }
@@ -312,14 +371,22 @@ public class ServerThread extends Thread {
 
             if (!playedSelection) {
 
-                server.getGame().checkSelectable(this);
-                if(server.getGame().getSelectableList().size() < 2){
-                    server.getGame().playSelection(this);
-                }
+                if(this.hasChosenNumber == false) {
+                    server.getGame().checkSelectable(this);
+                    if (server.getGame().getSelectableList().size() < 2) {
+                        server.getGame().playSelection(this);
+                    }
+                } else {
 
-                String message = "You have selected an unselectable player. \n"
-                                 + server.getGame().printSelectable();
-                server.sendMessageToOneClient(this, message);
+                    server.getGame().checkSelectable(this);
+                    if (server.getGame().getSelectableList().size() < 2) {
+                        server.getGame().playSelection(this);
+                    }
+
+                    String message = "You have selected an unselectable player. \n"
+                            + server.getGame().printSelectable();
+                    server.sendMessageToOneClient(this, message);
+                }
 
             }
 
