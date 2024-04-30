@@ -14,10 +14,10 @@ public class Client {
     private static final String hostname = "localhost";
     private static final int port = 5000;
 
-    Client() {
+    public Client() {
 
         try{
-            Socket clientSocket = new Socket("127.0.0.1", port);
+            Socket clientSocket = new Socket(hostname, port);
             System.out.println("Enter 'bye' to exit \nEnter a name: ");
 
             ReceivingThread receivingThread = new ReceivingThread(clientSocket);
@@ -28,7 +28,7 @@ public class Client {
         } catch (UnknownHostException e) {
             System.out.println("Unknown host '" + hostname + "'.");
         } catch (IOException e) {
-            System.out.println("Failed to connect to server at " + hostname + ":" + port+ ".");
+            System.out.println("Failed to connect. There is no running server.");
         }
     }
 

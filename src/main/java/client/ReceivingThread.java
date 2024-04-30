@@ -26,7 +26,11 @@ public class ReceivingThread extends Thread {
 
             while (true) {
                 String receivedMessage = input.readLine();
+                if(receivedMessage == null){
+                    System.exit(0);
+                } else {
                     System.out.println(receivedMessage);
+                }
             }
         } catch (IOException e) {
             System.out.println("Failed to create input reader.");

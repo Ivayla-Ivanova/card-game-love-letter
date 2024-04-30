@@ -52,7 +52,7 @@ public class Server {
         }
     }
     // Start listening for connecting clients
-    void runServer(){
+    public void runServer(){
 
         //Accepting multiple client connections
         while (true) {
@@ -82,6 +82,10 @@ public class Server {
     }
 
     //------------------Getter/SetterMethods---------------------------------------------------------------
+
+    public ServerSocket getServerSocket(){
+        return this.serverSocket;
+    }
     synchronized Set<String> getNames() {
 
         return this.names;
