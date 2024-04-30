@@ -1,34 +1,41 @@
 package server;
 
-import server.game.cards.Card;
+import server.cards.Card;
 
+/**
+ * Instances of this class represent players' hands of cards.
+ * The class provides helpful methods to work with player's hand of cards.
+ */
 public class Hand {
 
     private Card card1;
     private Card card2;
 
+    //Constructor
     Hand(){
         this.card1 = null;
         this.card2 = null;
     }
 
-    public Card getCard1(){
+    //-----------------Getter/Setter-Methods----------------------------------------------------------------------
+
+    Card getCard1(){
         return this.card1;
     }
 
-    public Card getCard2(){
+    Card getCard2(){
         return this.card2;
     }
 
-    public void setCard1(Card card){
+    void setCard1(Card card){
         this.card1 = card;
     }
 
-    public void setCard2(Card card){
+    void setCard2(Card card){
         this.card2 = card;
     }
 
-    public int getHandScore(){
+    int getHandScore(){
         int score;
 
         if(this.card1 == null && this.card2 == null){
@@ -50,25 +57,26 @@ public class Hand {
 
     }
 
-    public void addToHand(Card card){
+    //----------------Add/Remove/Clear-Methods-----------------------------------------------------------------------
+    void addToHand(Card card){
 
         if(this.card1 == null) {
             setCard1(card);
         } else setCard2(card);
     }
 
-    public void removeFromHand(Card card){
+    void removeFromHand(Card card){
         if(this.card1 == card){
             setCard1(null);
         } else setCard2(null);
     }
 
-    public void clearHand(){
+    void clearHand(){
         this.card1 = null;
         this.card2 = null;
     }
 
-    public  Card discardHand(){
+    Card discardHand(){
 
         if(this.card1 == null && this.card2 == null){
             return null;
@@ -86,6 +94,12 @@ public class Hand {
 
     }
 
+
+    //--------------------------------------------------------------------------------------------------------
+
+    /**
+     * @return String representation of player's hand.
+     */
     @Override
     public String toString() {
 

@@ -4,12 +4,17 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-class Client {
+/**
+ * The Client class represents a server application.
+ * It handles communication with the server.
+ * Start threads for sending and receiving messages.
+ */
+public class Client {
 
     private static final String hostname = "localhost";
     private static final int port = 5000;
 
-    public Client() {
+    Client() {
 
         try{
             Socket clientSocket = new Socket(hostname, port);
@@ -21,9 +26,9 @@ class Client {
             userThread.start();
 
         } catch (UnknownHostException e) {
-            throw new RuntimeException(e);
+            System.out.println("Unknown host '" + hostname + "'.");
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            System.out.println("Failed to connect to server at " + hostname + ":" + port+ ".");
         }
     }
 

@@ -1,12 +1,16 @@
 package server;
 
-import server.game.Game;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
+
+/**
+ * The Server class represents a server application.
+ * It handles incoming client connections, manages message passing to ServerThreads and
+ * shared resources between ServerThread and Game classes.
+ */
 
 public class Server {
     private static Server instance = null;
@@ -41,13 +45,13 @@ public class Server {
 
         try {
             serverSocket = new ServerSocket(5000);
-            System.out.println("Server started. Listening on port 5000");
+            serverLog(Thread.currentThread(),"Server started. Listening on port 5000");
 
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            serverLog(Thread.currentThread(), "Failed to create ServerSocket.");
         }
     }
-
+    // Start listening for connecting clients
     void runServer(){
 
         //Accepting multiple client connections
@@ -56,9 +60,9 @@ public class Server {
             try {
                 clientSocket = serverSocket.accept();
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                serverLog(Thread.currentThread(), "Error accepting client connection.");
             }
-            System.out.println("A client connected.");
+            serverLog(Thread.currentThread(),"A client connected.");
 
             //Creating a new connector thread for each client.
             ConnectingThread connector = new ConnectingThread(this, clientSocket);
@@ -66,6 +70,10 @@ public class Server {
         }
 
     }
+
+    /**
+     * Creates unique Server instance.
+     */
     public static synchronized Server getInstance() {
         if (instance == null)
             instance = new Server();
@@ -74,50 +82,53 @@ public class Server {
     }
 
     //------------------Getter/SetterMethods---------------------------------------------------------------
-    public synchronized Set<String> getNames() {
+    synchronized Set<String> getNames() {
 
         return this.names;
     }
-    public synchronized int getActivePlayerCount(){
+    synchronized int getActivePlayerCount(){
         return this.activePlayerCount;
     }
-    public synchronized List<ServerThread> getActivePlayersList() {
+    synchronized List<ServerThread> getActivePlayersList() {
 
         return this.activePlayersList;
     }
-    public synchronized boolean getHasGameStarted(){
+    synchronized boolean getHasGameStarted(){
         return this.hasGameStarted;
     }
-    public synchronized Game getGame(){
+    synchronized Game getGame(){
         return this.game;
     }
-    public synchronized ArrayList<ServerThread> getActivePlayerList(){
+    synchronized ArrayList<ServerThread> getActivePlayerList(){
         return this.activePlayersList;
     }
-    public synchronized void setHasGameStarted(boolean value){
+    synchronized void setHasGameStarted(boolean value){
         this.hasGameStarted = value;
     }
 
     //------------------Add/RemoveMethods------------------------------------------------------------------
-    public synchronized void addToMap(ServerThread serverThread){
+    synchronized void addToMap(ServerThread serverThread){
 
         mapOfServerThreads.put(serverThread, serverThread.getOutput());
 
     }
-    public synchronized void removeFromMap(ServerThread serverThread){
+    synchronized void removeFromMap(ServerThread serverThread){
 
         mapOfServerThreads.remove(serverThread);
     }
-    public synchronized void addToServerThreadList(ServerThread client){
+    synchronized void addToServerThreadList(ServerThread client){
         this.serverThreads.add(client);
 
     }
-    public synchronized void removeName(String name){
+    synchronized void removeName(String name){
         names.remove(name);
     }
 
     //--------------------MessageMethods-----------------------------------------------------------------------
 
+    /**
+     * Passes message to all connected and registered clients.
+     */
     public synchronized void sendMessageToAllClients(String message) {
 
         for (ServerThread key : mapOfServerThreads.keySet()) {
@@ -126,19 +137,29 @@ public class Server {
         }
     }
 
+    /**
+     * Passes message to specified client.
+     */
     public synchronized void sendMessageToOneClient(ServerThread client, String message){
 
         PrintWriter output = mapOfServerThreads.get(client);
         output.println(message);
     }
 
-    public  synchronized  void sendMessageToAllActivePlayers(String message){
+    /**
+     * Passes message to all active players.
+     */
+    public synchronized  void sendMessageToAllActivePlayers(String message){
 
         for(ServerThread player : activePlayersList){
             player.getOutput().println(message);
         }
     }
 
+    /**
+     * Passes message to all active player except for one.
+     * @param excluded Excluded player.
+     */
     public synchronized void sendMessageToAllActivePlayersExceptOne(ServerThread excluded, String message){
 
         for (ServerThread player : activePlayersList) {
@@ -152,6 +173,9 @@ public class Server {
 
     }
 
+    /**
+     * Passes message to all registered but not playing clients.
+     */
     public synchronized void sendMessageToNotActivePlayers(String message){
 
         for (ServerThread key : mapOfServerThreads.keySet()) {
@@ -164,6 +188,10 @@ public class Server {
         }
 
     }
+    /**
+     * Passes message to one client by its ServerThread if its name was entered correctly.
+     * @param from This is the ServerThread sending a passing message request.
+     */
     public synchronized void sendPersonalMessage(ServerThread from, String message){
 
         String [] temp = message.split(" ", 2);
@@ -200,39 +228,56 @@ public class Server {
 
     }
 
+    void serverLog(Thread call, String message){
+        System.out.println("From " + call.getName() + ": " +message);
+    }
+
     //----------------------------------------------------------------------------------------------------------------
 
-    public synchronized boolean increaseActivePlayerCount(ServerThread client) throws InterruptedException {
+    /**
+     * Increases the count of active players if its maximum is still not reached.
+     * @return true if the procedure was completed successfully.
+     */
+    public synchronized boolean increaseActivePlayerCount(ServerThread client){
 
         if(this.activePlayerCount + 1 > 4){
-            System.out.println("ServerThread " + client.getName() + " cannot join the game.");
+            serverLog(Thread.currentThread(), "ServerThread " + client.getName() + " cannot join the game.");
             return false;
         }
 
         this.activePlayerCount = this.activePlayerCount + 1;
         activePlayersList.add(client);
-        System.out.println("ServerThread " + client.getName() + " joined the game.");
+        serverLog(Thread.currentThread(), "ServerThread " + client.getName() + " joined the game.");
+        System.out.println();
         return true;
 
     }
-    public synchronized boolean decreaseActivePlayerCount(ServerThread client) throws InterruptedException {
+    /**
+     * Decreases the count of active players with restrictions.
+     * @return true if the procedure was completed successfully.
+     */
+    public synchronized boolean decreaseActivePlayerCount(ServerThread client){
 
         if(this.activePlayerCount - 1 < 0){
-            System.out.println("ServerThread " + client.getName()
+            serverLog(Thread.currentThread(), "ServerThread " + client.getName()
                     + " tries to decrease the number of active players below 0.");
             return false;
         }
 
         this.activePlayerCount = this.activePlayerCount - 1;
         activePlayersList.remove(client);
-        System.out.println("ServerThread " + client.getName() + " have exited the game.");
+        serverLog(Thread.currentThread(), "ServerThread " + client.getName() + " have exited the game.");
         return true;
 
     }
+
+    /**
+     * Replaces the entries of the list of active players with the entries of a given list.
+     */
     public synchronized void modifyActivePlayerList(ArrayList<ServerThread> list){
 
         if(list == null || list.isEmpty()){
-            System.out.println("activePlayersList remains unmodified.");
+            serverLog(Thread.currentThread(), "List of active players remains unmodified.");
             return;
         }
         this.activePlayersList.clear();
@@ -246,77 +291,91 @@ public class Server {
 
         this.game = Game.getInstance(this, this.activePlayersList);
         this.hasGameStarted = true;
-
+        serverLog(Thread.currentThread(), "A game instance was created.");
 
     }
+
+    /**
+     * Performs clean-up tasks and notifies all connected clients about the end of the game
+     * after a specified ending condition is met.
+     */
     public void gameOver(){
+
+        serverLog(Thread.currentThread(), "The game was ended.");
 
         sendMessageToAllClients("The game is over.");
 
         for(ServerThread client : serverThreads){
             client.resetPlayerAttributes();
-            try {
-                decreaseActivePlayerCount(client);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
+            decreaseActivePlayerCount(client);
             client.setHasJoinedGame(false);
         }
         game.resetGame();
         setHasGameStarted(false);
         sendMessageToAllClients("You can join a new game by typing $joinGame.");
     }
+
+    /**
+     * Handles a join game request sent by a client.
+     * This method processes the request, manages the conditions for a client to join the game
+     * and notifies other players about the new player joining if the conditions are met.
+     */
     public synchronized void joinGame(ServerThread serverThread){
 
-        try {
+        if(serverThread.getHasEnteredJoin() == false){
+            String sendMessage = "You cannot use game commands until you have joined the game.";
+            sendMessageToOneClient(serverThread, sendMessage);
+            return;
+        }
 
-            if(getHasGameStarted()){
-                String sendMessage = "The game has started. You cannot join it anymore.";
+        if(getHasGameStarted() && serverThread.getHasEnteredJoin()){
+            String sendMessage = "The game has started. You cannot join it anymore.";
+            sendMessageToOneClient(serverThread, sendMessage);
+            return;
+        }
+
+        if(serverThread.getHasJoinedGame() == true && serverThread.getHasEnteredJoin()){
+            String sendMessage = "You have already joined the game.";
+            sendMessageToOneClient(serverThread, sendMessage);
+            return;
+        }
+
+        if(serverThread.getHasEnteredDaysSinceLastDate() == false) {
+            sendMessageToOneClient(serverThread, "When was the last time you went on a date within the last 5 years?\n" +
+                    "Enter $number of days since your last date: ");
+
+        }else {
+            if (serverThread.getHasEnteredAge() == false) {
+                sendMessageToOneClient(serverThread, "How old are you in years?");
+
+            }
+        }
+
+        if(serverThread.getHasEnteredDaysSinceLastDate() == true &&
+        serverThread.getHasEnteredAge() == true) {
+
+            if (increaseActivePlayerCount(serverThread) == false) {
+
+                String sendMessage = "You were not able to join the game. Please try again later.";
                 sendMessageToOneClient(serverThread, sendMessage);
-                return;
-            }
-
-            if(serverThread.getHasJoinedGame() == true){
-                String sendMessage = "You have already joined the game.";
+            } else {
+                serverThread.setHasJoinedGame(true);
+                String sendMessage = "You joined the game.\nTo exit the game type $exitGame.";
                 sendMessageToOneClient(serverThread, sendMessage);
-                return;
+                String sendToEveryoneMessage = serverThread.getName() + " joined the game";
+                sendMessageToAllActivePlayersExceptOne(serverThread, sendToEveryoneMessage);
+                printGameMessagesToActivePlayers(this.activePlayerCount);
+
             }
-
-            if(serverThread.getHasEnteredDaysSinceLastDate() == false) {
-                sendMessageToOneClient(serverThread, "When was the last time you went on a date within the last 5 years?\n" +
-                        "Enter $number of days since your last date: ");
-
-            }else {
-                if (serverThread.getHasEnteredAge() == false) {
-                    sendMessageToOneClient(serverThread, "How old are you in years?");
-
-                }
-            }
-
-            if(serverThread.getHasEnteredDaysSinceLastDate() == true &&
-            serverThread.getHasEnteredAge() == true) {
-
-                if (increaseActivePlayerCount(serverThread) == false) {
-
-                    String sendMessage = "You were not able to join the game. Please try again later.";
-                    sendMessageToOneClient(serverThread, sendMessage);
-                } else {
-                    serverThread.setHasJoinedGame(true);
-                    String sendMessage = "You joined the game.\nTo exit the game type $exitGame.";
-                    sendMessageToOneClient(serverThread, sendMessage);
-                    String sendToEveryoneMessage = serverThread.getName() + " joined the game";
-                    sendMessageToAllActivePlayersExceptOne(serverThread, sendToEveryoneMessage);
-                    printGameMessagesToActivePlayers(this.activePlayerCount);
-
-                }
-            }
-
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
         }
 
     }
 
+    /**
+     * Handles a start game request sent by a client. If the conditions to start a game are met,
+     * this method calls the createGame method and starts the first round.
+     * It also notifies all clients about the start of a new game.
+     */
     public synchronized void starGame(ServerThread serverThread){
 
         if(!serverThread.getHasJoinedGame()){
@@ -350,45 +409,47 @@ public class Server {
         }
 
         this.game.startRound();
+        serverLog(Thread.currentThread(), "The game has started.");
 
 
     }
 
-    public  synchronized void exitGame(ServerThread serverThread){
+    /**
+     * Handles an exit game request sent by a client. If the conditions to exit the game are met,
+     * this method decreases the number of active players and if the number is lower than 2 ends the game.
+     * It also notifies all clients about player exiting the game.
+     */
+    public synchronized void exitGame(ServerThread serverThread){
 
-        //it user type $exitGame before joining the game
+        //if user types $exitGame before joining the game
         if(serverThread.getHasJoinedGame() == false){
             String sendMessage = "You cannot exit the game if you have not yet joined it.";
             sendMessageToOneClient(serverThread, sendMessage);
             return;
         }
 
-        try {
+        if(decreaseActivePlayerCount(serverThread) == false){
+            String sendMessage = "You were not able to exit the game.";
+            sendMessageToOneClient(serverThread, sendMessage);
+        } else {
+            serverThread.setHasJoinedGame(false);
+            String sendMessage = "You have exited the game.";
+            sendMessageToOneClient(serverThread, sendMessage);
+            String sendToEveryoneMessage = serverThread.getName() + " has exited the game.";
+            sendMessageToAllActivePlayersExceptOne(serverThread, sendToEveryoneMessage);
+            serverLog(Thread.currentThread(), serverThread.getName() + " has exited the game.");
 
-            if(decreaseActivePlayerCount(serverThread) == false){
-                String sendMessage = "You were not able to exit the game.";
-                sendMessageToOneClient(serverThread, sendMessage);
-            } else {
-                serverThread.setHasJoinedGame(false);
-                String sendMessage = "You have exited the game.";
-                sendMessageToOneClient(serverThread, sendMessage);
-                String sendToEveryoneMessage = serverThread.getName() + " has exited the game.";
-                sendMessageToAllActivePlayersExceptOne(serverThread, sendToEveryoneMessage);
+            if(hasGameStarted == true){
 
-                if(hasGameStarted == true){
-
-                    if(activePlayersList.size() < 2){
-                        gameOver();
-                        return;
-                    }
-                }
-
-                if(hasGameStarted == false) {
-                    printGameMessagesToActivePlayers(this.activePlayerCount);
+                if(activePlayersList.size() < 2){
+                    gameOver();
+                    return;
                 }
             }
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+
+            if(hasGameStarted == false) {
+                printGameMessagesToActivePlayers(this.activePlayerCount);
+            }
         }
 
     }
@@ -425,9 +486,5 @@ public class Server {
         }
 
     }
-
-
-
-
 
 }

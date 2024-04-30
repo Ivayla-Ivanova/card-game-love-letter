@@ -5,7 +5,10 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Scanner;
 
-class UserThread extends Thread{
+/**
+ * This class represents a thread for receiving messages from the user and passing them to the server.
+ */
+public class UserThread extends Thread{
 
     private Socket clientSocket;
     private Scanner scanner;
@@ -14,7 +17,9 @@ class UserThread extends Thread{
         this.clientSocket = clientSocket;
         this.scanner = new Scanner(System.in);
     }
-
+    /**
+     * run method of the UserThread.
+     */
     public void run() {
 
         try(PrintWriter output = new PrintWriter(clientSocket.getOutputStream(), true)) {
@@ -27,7 +32,7 @@ class UserThread extends Thread{
                     output.println(message);
             }
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            System.out.println("Failed to create output writer or input reader.");
         }
     }
 

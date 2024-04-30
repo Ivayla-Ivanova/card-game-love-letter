@@ -8,11 +8,16 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Random;
 
-import server.game.cards.Card;
+import server.cards.Card;
 
+/**
+ * Instances of the ServerThread class handle requests send by their associate clients.
+ * An instance of this class in successfully created after the associate client provides valid name.
+ * A ServerThread manages also the resources associated with participating in the game.
+ */
 public class ServerThread extends Thread {
 
-    //ServerThread attributes
+    //---------------ServerThread attributes------------------------------------------------------------------
 
     private Socket clientSocket;
     private PrintWriter output;
@@ -22,8 +27,13 @@ public class ServerThread extends Thread {
 
     private String name;
     private boolean hasJoinedGame;
+    private boolean hasEnteredDaysSinceLastDate;
+    private int age;
+    private boolean hasEnteredAge;
+    private boolean hasEnteredJoinGame;
+    private static Random randomGenerator = new Random();
 
-    //Player attributes
+    //-----------------------------------Player attributes--------------------------------------------------------
     private Hand hand;
     private ArrayList<Card> discardPile;
     private int tokens;
@@ -33,7 +43,6 @@ public class ServerThread extends Thread {
     private int daysSinceLastDate;
     private String receivedCard;
     private String nameOfChosenPlayer;
-
     private boolean hasCountess;
     private boolean isProtected;
 
@@ -45,19 +54,23 @@ public class ServerThread extends Thread {
     private int chosenNumber;
     private boolean hasChosenNumber;
 
-    private boolean hasEnteredDaysSinceLastDate;
-
-    private int age;
-    private boolean hasEnteredAge;
-
-    private static Random randomGenerator = new Random();
 
 //--------------------------------------------------------------------------------------------------------
-    public ServerThread(Server server, Socket clientSocket) throws IOException {
+
+    ServerThread(Server server, Socket clientSocket) {
+
         this.server = server;
         this.clientSocket = clientSocket;
-        this.output = new PrintWriter(clientSocket.getOutputStream(), true);
-        this.input = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+        try {
+            this.output = new PrintWriter(clientSocket.getOutputStream(), true);
+        } catch (IOException e) {
+            server.serverLog(Thread.currentThread(), "Failed to create output writer");
+        }
+        try {
+            this.input = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+        } catch (IOException e) {
+            server.serverLog(Thread.currentThread(), "Failed to create input reader.");
+        }
         this.name = enteringName(input, output);
 
         this.hasJoinedGame = false;
@@ -68,14 +81,19 @@ public class ServerThread extends Thread {
         this.hasEnteredAge = false;
         this.age = 0;
 
+        this.hasEnteredJoinGame = false;
+
         server.addToMap(this);
         server.addToServerThreadList(this);
-
 
         resetPlayerAttributes();
 
     }
 
+    /**
+     * Initialize the player attributes with default values.
+     * This method is called, when ServerThread instance is created or new game starts.
+     */
     public void resetPlayerAttributes(){
 
         this.hand = new Hand();
@@ -97,78 +115,9 @@ public class ServerThread extends Thread {
 
     }
 
-    public boolean getHasEnteredDaysSinceLastDate(){
-        return this.hasEnteredDaysSinceLastDate;
-    }
-
-    public int getAge(){
-        return this.age;
-    }
-
-    public boolean getHasEnteredAge(){
-        return this.hasEnteredAge;
-    }
-    public int getChosenNumber(){
-        return this.chosenNumber;
-    }
-
-    public boolean getHasChosenNumber(){
-        return this.hasChosenNumber;
-    }
-
-    public void setHasChosenNumber(boolean value){
-        this.hasChosenNumber = value;
-    }
-
-    public boolean getHasDiscardedPrince(){
-        return this.hasDiscardedPrince;
-    }
-
-    public void setHasDiscardedPrince(boolean value){
-        this.hasDiscardedPrince = value;
-    }
-
-    public boolean getPlayedSelection(){
-        return this.playedSelection;
-    }
-
-    public void setPlayedSelection(boolean value){
-        this.playedSelection = value;
-    }
-
-    public ArrayList<Card> getDiscardPile(){
-        return this.discardPile;
-    }
-
-    public Card getDiscaredCard(){
-        return this.discaredCard;
-    }
-
-    public void setDiscaredCard(Card card){
-        this.discaredCard = card;
-    }
-
-    public boolean getHasCountess(){
-        return this.hasCountess;
-    }
-
-    public void setHasCountess(boolean value){
-        this.hasCountess = value;
-    }
-
-    public boolean getIsProtected(){
-        return this.isProtected;
-    }
-
-    public void setIsProtected(boolean value){
-        this.isProtected = value;
-    }
-
-    public String getNameOfChosenPlayer(){
-        return this.nameOfChosenPlayer;
-    }
-
-
+    /**
+     *Receive incoming requests from the associate client and passes them to request handling methods.
+     */
     @Override
     public void run() {
 
@@ -176,117 +125,199 @@ public class ServerThread extends Thread {
 
             this.output.close();
             this.interrupt();
-            System.out.println("Client disconnected before entering the chat.");
+            server.serverLog(Thread.currentThread(), "Client disconnected before entering the chat.");
         } else {
             this.setName(this.name);
-            System.out.println("A new ServerThread started. ID: " + this.name);
+            server.serverLog(Thread.currentThread(), "A new ServerThread started. NAME: " + this.name);
 
 
-            try {
+            while (true) {
 
-                while (true) {
-
-                    // Receiving messages from the client
-                    String receivedMessage = input.readLine();
-
-
-                    // Clean up after the client disconnects
-                    if (receivedMessage == null) {
-                        System.out.println(this.getName() + " interrupted.");
-                        server.exitGame(this);
-
-                        server.removeFromMap(this);
-                        server.removeName(this.getName());
-
-                        String sendMessage = "%s left the room".formatted(this.getName());
-                        server.sendMessageToAllClients(sendMessage);
-
-                        this.output.close();
-                        this.interrupt();
-                        break;
-                    } else if(receivedMessage.isBlank()){
-                        //Do nothing
-                    } else if (receivedMessage.startsWith("@")) {
-                        server.sendPersonalMessage(this, receivedMessage);
-                    } else if(receivedMessage.startsWith("$")){
-                        sendingGameMessage(receivedMessage);
-                    } else {
-                        String sendMessage = this.getName() + ": " + receivedMessage;
-                        server.sendMessageToAllClients(sendMessage);
-                    }
+                // Receiving messages from the client
+                String receivedMessage = null;
+                try {
+                    receivedMessage = input.readLine();
+                } catch (IOException e) {
+                    server.serverLog(Thread.currentThread(),"Attempt to read from the input reader has failed.");
                 }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+
+
+                // Clean up after the client disconnects
+                if (receivedMessage == null) {
+                    server.serverLog(Thread.currentThread(), this.getName() + " interrupted.");
+                    safelyExitGame();
+
+                    server.removeFromMap(this);
+                    server.removeName(this.getName());
+
+                    String sendMessage = "%s left the room.".formatted(this.getName());
+                    server.sendMessageToAllClients(sendMessage);
+
+                    this.output.close();
+                    this.interrupt();
+                    break;
+                } else if(receivedMessage.isBlank()){
+                    //Do nothing
+                } else if (receivedMessage.startsWith("@")) {
+                    server.sendPersonalMessage(this, receivedMessage);
+                } else if(receivedMessage.startsWith("$")){
+                    sendGameMessage(receivedMessage);
+                } else {
+                    String sendMessage = this.getName() + ": " + receivedMessage;
+                    server.sendMessageToAllClients(sendMessage);
+                }
             }
+
         }
     }
 
-    //--------------Getter/Setter-Methods-------------------------------------------------------------------
+    //------------------------------------Getter/SetterMethods---------------------------------------------------------
 
-    public PrintWriter getOutput(){
+    PrintWriter getOutput(){
         return this.output;
     }
 
-    public boolean getHasJoinedGame(){
+    boolean getHasJoinedGame(){
         return this.hasJoinedGame;
     }
-    public void setHasJoinedGame(boolean value){
+    void setHasJoinedGame(boolean value){
         this.hasJoinedGame = value;
     }
 
-    public boolean getIsInRound(){
+    boolean getIsInRound(){
         return this.isInRound;
     }
-    public void setIsInRound(boolean value){
+    void setIsInRound(boolean value){
         this.isInRound = value;
     }
-
-    public boolean getHasWonLastRound(){
+    boolean getHasWonLastRound(){
         return  this.wonLastRound;
     }
-    public void setHasWonLastRound(boolean value){
+    void setHasWonLastRound(boolean value){
         this.wonLastRound = value;
     }
 
-    public String getReceivedCard(){
+    String getReceivedCard(){
         return this.receivedCard;
     }
 
-    public int getDaysSinceLastDate(){
+    int getDaysSinceLastDate(){
         return this.daysSinceLastDate;
     }
 
-    public void setIsOnTurn(Thread call ,boolean value){
+    void setIsOnTurn(Thread call ,boolean value){
         this.isOnTurn = value;
         System.out.println(this.getName() + " setIsOnTurn: " + value + " by " + call.getName());
     }
-    public boolean getIsOnTurn(Thread call){
+    boolean getIsOnTurn(Thread call){
         System.out.println(this.getName() + " getIsOnTurn: " + this.isOnTurn + " was called by " + call.getName());
         return this.isOnTurn;
 
     }
 
-    public Hand getHand(){
+    Hand getHand(){
         return this.hand;
     }
-    public void setHand(Hand hand){
+    void setHand(Hand hand){
         this.hand = hand;
     }
 
-    public void addTokens(){
+    void addTokens(){
         this.tokens = this.tokens + 1;
     }
-    public int getTokens(){
+    int getTokens(){
         return this.tokens;
     }
-
-    public void addToDiscardPile(Card card){
-        this.discardPile.add(card);
-
+    boolean getHasEnteredJoin(){
+        return this.hasEnteredJoinGame;
     }
-    public void clearDiscardPile(){
-        this.discardPile.clear();
+
+    boolean getHasEnteredDaysSinceLastDate(){
+        return this.hasEnteredDaysSinceLastDate;
     }
+
+    int getAge(){
+        return this.age;
+    }
+
+    boolean getHasEnteredAge(){
+        return this.hasEnteredAge;
+    }
+    int getChosenNumber(){
+        return this.chosenNumber;
+    }
+
+    boolean getHasChosenNumber(){
+        return this.hasChosenNumber;
+    }
+
+    /**
+     * Set-Method for a binary semaphore.
+     */
+    public void setHasChosenNumber(boolean value){
+        this.hasChosenNumber = value;
+    }
+
+    boolean getHasDiscardedPrince(){
+        return this.hasDiscardedPrince;
+    }
+
+    /**
+     * Set-Method for a binary semaphore.
+     */
+    public void setHasDiscardedPrince(boolean value){
+        this.hasDiscardedPrince = value;
+    }
+
+    boolean getPlayedSelection(){
+        return this.playedSelection;
+    }
+
+    void setPlayedSelection(boolean value){
+        this.playedSelection = value;
+    }
+
+    ArrayList<Card> getDiscardPile(){
+        return this.discardPile;
+    }
+
+    Card getDiscaredCard(){
+        return this.discaredCard;
+    }
+
+    void setDiscardedCard(Card card){
+        this.discaredCard = card;
+    }
+
+    boolean getHasCountess(){
+        return this.hasCountess;
+    }
+
+    /**
+     * Set-Method for a binary semaphore.
+     */
+    public void setHasCountess(boolean value){
+        this.hasCountess = value;
+    }
+
+    boolean getIsProtected(){
+        return this.isProtected;
+    }
+
+    /**
+     * Set-Method for a binary semaphore.
+     * @param value
+     */
+    public void setIsProtected(boolean value){
+        this.isProtected = value;
+    }
+    String getNameOfChosenPlayer(){
+        return this.nameOfChosenPlayer;
+    }
+
+    /**
+     * @return String representation of the discard pile of a player.
+     */
     public String getDiscardPileRepresentation(){
 
         StringBuilder printDiscardPile = new StringBuilder("Discard Pile: [");
@@ -298,7 +329,7 @@ public class ServerThread extends Thread {
 
         return String.valueOf(printDiscardPile);
     }
-    public int getScoreOfDiscardPile(){
+    int getScoreOfDiscardPile(){
         int score = 0;
         for(Card card : this.discardPile){
             score = score + card.getCardNumber();
@@ -307,44 +338,37 @@ public class ServerThread extends Thread {
     }
 
 
-//----------------------------------------------------------------------------------------------------------
-    public void sendingGameMessage(String receivedMessage){
+    //--------------add/remove/clear-Methods-------------------------------------------------------------------
+
+    void addToDiscardPile(Card card){
+        this.discardPile.add(card);
+
+    }
+    void clearDiscardPile(){
+        this.discardPile.clear();
+    }
+
+
+//-----------------CommandsHandler/Utility-Methods-----------------------------------------------------------------------------------------
+    private void sendGameMessage(String receivedMessage){
 
         String receivedCommand = receivedMessage.substring(1);
         int receivedNumber = 0;
         try {
             receivedNumber = Integer.parseInt(receivedCommand);
         } catch (NumberFormatException e) {
-            System.out.println("The received command is not an integer.");
+            server.serverLog(Thread.currentThread(), "The received command is not an integer.");
         }
 
         if(receivedCommand.equals("joinGame")){
+
+            this.hasEnteredJoinGame = true;
 
             server.joinGame(this);
 
         }else if (receivedCommand.equals("exitGame")){
 
-           int randomCard = randomGenerator.nextInt(2);
-
-           if(randomCard == 0) {
-               this.receivedCard = "card1";
-           } else{
-               this.receivedCard = "card2";
-           }
-
-           this.hasChosenNumber = true;
-           int randomNumber = randomGenerator.nextInt(2,9);
-           this.chosenNumber = randomNumber;
-
-           this.playedSelection = true;
-           server.getGame().checkSelectable(this);
-           int randomIndex = randomGenerator.nextInt(server.getGame().getSelectableList().size());
-           this.nameOfChosenPlayer = server.getGame().getSelectableList().get(randomIndex).getName();
-
-            server.getGame().knockOutOfRound(this);
-            this.isOnTurn = false;
-            server.getGame().checkMoveOn(this);
-            server.exitGame(this);
+            safelyExitGame();
 
         }else if(receivedCommand.equals("startGame")){
 
@@ -368,26 +392,29 @@ public class ServerThread extends Thread {
 
         }else if(receivedNumber != 0){
 
-            if(this.hasJoinedGame == false){
+            if(this.hasJoinedGame == false && server.getHasGameStarted() == false && this.hasEnteredJoinGame){
 
 
                 if(this.hasEnteredDaysSinceLastDate == false){
 
                     this.hasEnteredDaysSinceLastDate = enterDaysSinceLastDate(receivedNumber);
+                    if(this.hasEnteredJoinGame) {
                         server.joinGame(this);
+                    }
 
                 } else{
 
-                    this.hasEnteredAge = enterAge(receivedNumber);
+                    if(hasEnteredJoinGame) {
+                        this.hasEnteredAge = enterAge(receivedNumber);
                         server.joinGame(this);
+                    }
                 }
 
-            } else{
-
-                receiveNumber(receivedNumber);
             }
 
-
+            if(server.getHasGameStarted()){
+                receiveNumber(receivedNumber);
+            }
 
         }else {
 
@@ -397,7 +424,7 @@ public class ServerThread extends Thread {
 
     }
 
-    public boolean enterAge(int receivedNumber){
+    private boolean enterAge(int receivedNumber){
         if(receivedNumber < 1 || receivedNumber > 120) {
             server.sendMessageToOneClient(this, "That doesn't seem right! Please try again.");
             return false;
@@ -407,7 +434,7 @@ public class ServerThread extends Thread {
         }
     }
 
-    public boolean enterDaysSinceLastDate(int receivedNumber){
+    private boolean enterDaysSinceLastDate(int receivedNumber){
         if(receivedNumber < 1 || receivedNumber > 1825) {
             server.sendMessageToOneClient(this, "That doesn't seem right! Please try again.");
             return false;
@@ -436,7 +463,6 @@ public class ServerThread extends Thread {
         }
 
     }
-
 
     private void receiveName(String receivedCommand) {
 
@@ -499,9 +525,6 @@ public class ServerThread extends Thread {
         }
     }
 
-
-    //---------FullyImplementedMethods---------------------------------------------------------------------
-
     private String enteringName(BufferedReader in, PrintWriter out) {
 
         String name;
@@ -555,6 +578,33 @@ public class ServerThread extends Thread {
         server.sendMessageToOneClient(this, description);
     }
 
+    private void safelyExitGame(){
+
+        this.hasEnteredJoinGame = false;
+
+        int randomCard = randomGenerator.nextInt(2);
+
+        if(randomCard == 0) {
+            this.receivedCard = "card1";
+        } else{
+            this.receivedCard = "card2";
+        }
+
+        this.hasChosenNumber = true;
+        int randomNumber = randomGenerator.nextInt(2,9);
+        this.chosenNumber = randomNumber;
+
+        this.playedSelection = true;
+        server.getGame().checkSelectable(this);
+        int randomIndex = randomGenerator.nextInt(server.getGame().getSelectableList().size());
+        this.nameOfChosenPlayer = server.getGame().getSelectableList().get(randomIndex).getName();
+
+        server.getGame().knockOutOfRound(this);
+        this.isOnTurn = false;
+        server.getGame().checkMoveOn(this);
+        server.exitGame(this);
+
+    }
 
 }
 
