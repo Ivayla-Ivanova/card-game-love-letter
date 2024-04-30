@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.BindException;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Random;
@@ -293,14 +294,32 @@ public class ServerThread extends Thread {
             System.out.println("The received command is not an integer.");
         }
 
-
         if(receivedCommand.equals("joinGame")){
 
             server.joinGame(this);
 
         }else if (receivedCommand.equals("exitGame")){
 
+           int randomCard = randomGenerator.nextInt(2);
+
+           if(randomCard == 0) {
+               this.receivedCard = "card1";
+           } else{
+               this.receivedCard = "card2";
+           }
+
+           this.hasChosenNumber = true;
+           int randomNumber = randomGenerator.nextInt(2,9);
+           this.chosenNumber = randomNumber;
+
+           this.playedSelection = true;
+           server.getGame().checkSelectable(this);
+           int randomIndex = randomGenerator.nextInt(server.getGame().getSelectableList().size());
+           this.nameOfChosenPlayer = server.getGame().getSelectableList().get(randomIndex).getName();
+
             server.getGame().knockOutOfRound(this);
+            this.isOnTurn = false;
+            server.getGame().checkMoveOn(this);
             server.exitGame(this);
 
         }else if(receivedCommand.equals("startGame")){
