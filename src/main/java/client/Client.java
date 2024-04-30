@@ -17,7 +17,7 @@ public class Client {
     Client() {
 
         try{
-            Socket clientSocket = new Socket(hostname, port);
+            Socket clientSocket = new Socket("127.0.0.1", port);
             System.out.println("Enter 'bye' to exit \nEnter a name: ");
 
             ReceivingThread receivingThread = new ReceivingThread(clientSocket);
