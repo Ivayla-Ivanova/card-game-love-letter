@@ -27,7 +27,7 @@ public class Guard extends Card{
 
         if(game.getSelectableList().isEmpty()){
 
-            cardEffect[0] = "You played the card 'Guard'. This card is discarded without any effect. Type any player $name to end your turn.";
+            cardEffect[0] = "You played the card 'Guard'. This card is discarded without any effect. Type any $number and any player $name to end your turn.";
             cardEffect[1] = player.getName() + " played the card 'Guard'. This card is discarded without any effect. ";
             return cardEffect;
         }

@@ -418,6 +418,7 @@ public class Game {
                 cardEffect = discardedCard.applyCardEffect(selected);
                 String messageForOwnClient  = cardEffect[0];
                 String messageForEveryoneInRound = cardEffect[1];
+
                 server.sendMessageToOneClient(selected, messageForOwnClient);
                 server.sendMessageToOneClient(selected, "Your " + selected.getDiscardPileRepresentation());
                 server.sendMessageToAllActivePlayersExceptOne(selected, messageForEveryoneInRound);
@@ -468,8 +469,11 @@ public class Game {
         player.setIsInRound(false);
         this.playerInRound.put(player, false);
         Card hand = player.getHand().discardHand();
-        player.addToDiscardPile(hand);
-        player.getHand().clearHand();
+        if(hand != null){
+            player.addToDiscardPile(hand);
+            player.getHand().clearHand();
+        }
+
         server.serverLog(Thread.currentThread(), player.getName() +" was kicked out of the round.");
 
     }

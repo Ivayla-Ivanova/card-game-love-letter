@@ -145,6 +145,7 @@ public class ServerThread extends Thread {
                 // Clean up after the client disconnects
                 if (receivedMessage == null) {
                     server.serverLog(Thread.currentThread(), this.getName() + " interrupted.");
+                    server.decreaseActivePlayerCount(this);
                     safelyExitGame();
 
                     server.removeFromMap(this);
@@ -598,7 +599,6 @@ public class ServerThread extends Thread {
         server.getGame().checkSelectable(this);
         int randomIndex = randomGenerator.nextInt(server.getGame().getSelectableList().size());
         this.nameOfChosenPlayer = server.getGame().getSelectableList().get(randomIndex).getName();
-
         server.getGame().knockOutOfRound(this);
         this.isOnTurn = false;
         server.getGame().checkMoveOn(this);
