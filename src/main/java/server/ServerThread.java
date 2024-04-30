@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.net.BindException;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Random;
@@ -46,6 +45,11 @@ public class ServerThread extends Thread {
     private int chosenNumber;
     private boolean hasChosenNumber;
 
+    private boolean hasEnteredDaysSinceLastDate;
+
+    private int age;
+    private boolean hasEnteredAge;
+
     private static Random randomGenerator = new Random();
 
 //--------------------------------------------------------------------------------------------------------
@@ -55,9 +59,18 @@ public class ServerThread extends Thread {
         this.output = new PrintWriter(clientSocket.getOutputStream(), true);
         this.input = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
         this.name = enteringName(input, output);
+
         this.hasJoinedGame = false;
+
+        this.hasEnteredDaysSinceLastDate = false;
+        this.daysSinceLastDate = 0;
+
+        this.hasEnteredAge = false;
+        this.age = 0;
+
         server.addToMap(this);
         server.addToServerThreadList(this);
+
 
         resetPlayerAttributes();
 
@@ -71,7 +84,7 @@ public class ServerThread extends Thread {
         this.isInRound = false;
         this.wonLastRound = false;
         this.isOnTurn = false;
-        this.daysSinceLastDate = randomGenerator.nextInt(366);
+
         this.receivedCard = null;
         this.nameOfChosenPlayer = null;
         this.hasCountess = false;
@@ -84,6 +97,17 @@ public class ServerThread extends Thread {
 
     }
 
+    public boolean getHasEnteredDaysSinceLastDate(){
+        return this.hasEnteredDaysSinceLastDate;
+    }
+
+    public int getAge(){
+        return this.age;
+    }
+
+    public boolean getHasEnteredAge(){
+        return this.hasEnteredAge;
+    }
     public int getChosenNumber(){
         return this.chosenNumber;
     }
@@ -344,7 +368,26 @@ public class ServerThread extends Thread {
 
         }else if(receivedNumber != 0){
 
-            receiveNumber(receivedNumber);
+            if(this.hasJoinedGame == false){
+
+
+                if(this.hasEnteredDaysSinceLastDate == false){
+
+                    this.hasEnteredDaysSinceLastDate = enterDaysSinceLastDate(receivedNumber);
+                        server.joinGame(this);
+
+                } else{
+
+                    this.hasEnteredAge = enterAge(receivedNumber);
+                        server.joinGame(this);
+                }
+
+            } else{
+
+                receiveNumber(receivedNumber);
+            }
+
+
 
         }else {
 
@@ -352,6 +395,26 @@ public class ServerThread extends Thread {
             server.sendMessageToOneClient(this, sendMessage);
         }
 
+    }
+
+    public boolean enterAge(int receivedNumber){
+        if(receivedNumber < 1 || receivedNumber > 120) {
+            server.sendMessageToOneClient(this, "That doesn't seem right! Please try again.");
+            return false;
+        } else {
+            this.age = receivedNumber;
+            return true;
+        }
+    }
+
+    public boolean enterDaysSinceLastDate(int receivedNumber){
+        if(receivedNumber < 1 || receivedNumber > 1825) {
+            server.sendMessageToOneClient(this, "That doesn't seem right! Please try again.");
+            return false;
+        } else {
+            this.daysSinceLastDate = receivedNumber;
+            return true;
+        }
     }
 
     private void receiveNumber(int number){

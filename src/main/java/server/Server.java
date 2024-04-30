@@ -282,18 +282,33 @@ public class Server {
                 return;
             }
 
-            if(increaseActivePlayerCount(serverThread) == false){
+            if(serverThread.getHasEnteredDaysSinceLastDate() == false) {
+                sendMessageToOneClient(serverThread, "When was the last time you went on a date within the last 5 years?\n" +
+                        "Enter $number of days since your last date: ");
 
-                String sendMessage = "You were not able to join the game. Please try again later.";
-                sendMessageToOneClient(serverThread, sendMessage);
-            } else {
-                serverThread.setHasJoinedGame(true);
-                String sendMessage = "You joined the game.\nTo exit the game type $exitGame.";
-                sendMessageToOneClient(serverThread, sendMessage);
-                String sendToEveryoneMessage = serverThread.getName() + " joined the game";
-                sendMessageToAllActivePlayersExceptOne(serverThread, sendToEveryoneMessage);
-                printGameMessagesToActivePlayers(this.activePlayerCount);
+            }else {
+                if (serverThread.getHasEnteredAge() == false) {
+                    sendMessageToOneClient(serverThread, "How old are you in years?");
 
+                }
+            }
+
+            if(serverThread.getHasEnteredDaysSinceLastDate() == true &&
+            serverThread.getHasEnteredAge() == true) {
+
+                if (increaseActivePlayerCount(serverThread) == false) {
+
+                    String sendMessage = "You were not able to join the game. Please try again later.";
+                    sendMessageToOneClient(serverThread, sendMessage);
+                } else {
+                    serverThread.setHasJoinedGame(true);
+                    String sendMessage = "You joined the game.\nTo exit the game type $exitGame.";
+                    sendMessageToOneClient(serverThread, sendMessage);
+                    String sendToEveryoneMessage = serverThread.getName() + " joined the game";
+                    sendMessageToAllActivePlayersExceptOne(serverThread, sendToEveryoneMessage);
+                    printGameMessagesToActivePlayers(this.activePlayerCount);
+
+                }
             }
 
         } catch (InterruptedException e) {

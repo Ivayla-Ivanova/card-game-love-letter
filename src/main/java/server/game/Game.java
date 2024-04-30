@@ -708,6 +708,7 @@ public class Game {
     private ServerThread getInitialPlayer(){
 
         ServerThread initialPlayer = null;
+        int countPlayersWithSameLastDate = 0;
 
         if(roundWinners.size() == 1) {
             initialPlayer = this.roundWinner;
@@ -719,16 +720,43 @@ public class Game {
 
         if(roundWinners.size() < 1) {
 
+            // Get count of players with same LastDate
             for (ServerThread player : listOfActivePlayers) {
                 if (player.getDaysSinceLastDate() == getLowestDaysSinceDate()) {
-                    initialPlayer = player;
-                    server.sendMessageToOneClient(player, "You had recently a date. Now it's your turn to go first in this round.");
-                    server.sendMessageToAllActivePlayersExceptOne(player, player.getName() +
-                                                                          " had recently a date. Now " + player.getName() + " goes first.");
+                    countPlayersWithSameLastDate = countPlayersWithSameLastDate + 1;
+                }
+            }
+
+            // if there is one player with lowest LastDate
+                if(countPlayersWithSameLastDate == 1){
+                    for(ServerThread player : listOfActivePlayers){
+                        if (player.getDaysSinceLastDate() == getLowestDaysSinceDate()) {
+                            initialPlayer = player;
+                            server.sendMessageToOneClient(player, "You had recently a date. Now it's your turn to go first in this round.");
+                            server.sendMessageToAllActivePlayersExceptOne(player, player.getName() +
+                                    " had recently a date. Now " + player.getName() + " goes first.");
+                        }
+                    }
+
                     return initialPlayer;
                 }
 
-            }
+                // there are multiple players with same lowest LastDate
+                if(countPlayersWithSameLastDate > 1){
+                    for(ServerThread player : listOfActivePlayers){
+                        if (player.getDaysSinceLastDate() == getLowestDaysSinceDate()
+                                && player.getAge() == getLowestAge()) {
+                            initialPlayer = player;
+                            server.sendMessageToOneClient(player, "You had recently a date and you are the youngest person. Now it's your turn to go first in this round.");
+                            server.sendMessageToAllActivePlayersExceptOne(player, player.getName() +
+                                    " is the youngest person and had recently a date. Now " + player.getName() + " goes first.");
+                            return initialPlayer;
+                        }
+                    }
+
+
+                }
+
         }
 
         if(roundWinners.size() > 1){
@@ -751,7 +779,7 @@ public class Game {
     }
     private int getLowestDaysSinceDate(){
 
-        int minDaysSinceLastDate = 400;
+        int minDaysSinceLastDate = 2000;
         for (ServerThread client : server.getActivePlayersList()) {
 
             if (client.getDaysSinceLastDate() < minDaysSinceLastDate) {
@@ -760,6 +788,20 @@ public class Game {
         }
 
         return minDaysSinceLastDate;
+
+    }
+
+    private int getLowestAge(){
+
+        int minAge = 150;
+        for (ServerThread client : server.getActivePlayersList()) {
+
+            if (client.getAge() < minAge) {
+                minAge = client.getDaysSinceLastDate();
+            }
+        }
+
+        return minAge;
 
     }
     private synchronized void getRoundWinner(){
