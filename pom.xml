@@ -14,7 +14,18 @@
         <junit.version>5.10.0</junit.version>
     </properties>
 
+
+
+
     <dependencies>
+
+        <!-- https://mvnrepository.com/artifact/sh.tak.appbundler/appbundle-maven-plugin -->
+        <dependency>
+            <groupId>sh.tak.appbundler</groupId>
+            <artifactId>appbundle-maven-plugin</artifactId>
+            <version>1.2.0</version>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-jar-plugin -->
         <dependency>
             <groupId>org.apache.maven.plugins</groupId>
@@ -74,6 +85,9 @@
 
     <build>
         <plugins>
+
+
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>

@@ -15,7 +15,7 @@ public class Countess extends Card{
     }
 
     /**
-     * Apply part of the card effect. The rest of the card effect is implemented in the class Game.
+     * Applies part of the card effect. The rest of the card effect is implemented in the class Game.
      * @param player The player who played the card.
      * @return String representation of the card effect.
      */
