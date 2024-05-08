@@ -48,7 +48,7 @@ public class Server {
             serverLog(Thread.currentThread(),"Server started. Listening on port 5000");
 
         } catch (IOException e) {
-            serverLog(Thread.currentThread(), "Failed to create ServerSocket.");
+            serverLog(Thread.currentThread(), "There is a running server. Connecting to the server...");
         }
     }
     // Start listening for connecting clients

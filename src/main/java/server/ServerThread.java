@@ -321,6 +321,10 @@ public class ServerThread extends Thread {
      */
     public String getDiscardPileRepresentation(){
 
+        if(this.discardPile.isEmpty() || this.discardPile == null){
+            return "Discard Pile is empty.";
+        }
+
         StringBuilder printDiscardPile = new StringBuilder("Discard Pile: [");
 
         for(int i = 0; i < this.discardPile.size() - 1; i++){

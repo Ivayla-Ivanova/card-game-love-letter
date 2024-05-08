@@ -24,8 +24,8 @@ public class Princess extends Card{
         String [] cardEffect = new String[2];
         this.game.knockOutOfRound(player);
 
-        cardEffect[0] = "You played the card 'Princess' and you are kicked out of the round.";
-        cardEffect[1] = player.getName() + " played the card 'Princess' and was kicked out of the round.";
+        cardEffect[0] = "You played the card 'Princess'.";
+        cardEffect[1] = player.getName() + " played the card 'Princess'.";
         return cardEffect;
     }
 

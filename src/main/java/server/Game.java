@@ -210,11 +210,18 @@ public class Game {
 
         String messageForOwnClient  = cardEffect[0];
         String messageForEveryoneInRound = cardEffect[1];
-        server.sendMessageToOneClient(player, messageForOwnClient);
-        server.sendMessageToOneClient(player, "Your " + player.getDiscardPileRepresentation());
-        server.sendMessageToAllActivePlayersExceptOne(player, messageForEveryoneInRound);
-        server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + "'s " + player.getDiscardPileRepresentation());
-        server.serverLog(Thread.currentThread(), player.getName() +" played card Nr: " + card.getCardNumber());
+
+        if(card.getCardNumber() == 8){
+            server.sendMessageToOneClient(player, messageForOwnClient);
+            server.sendMessageToAllActivePlayersExceptOne(player, messageForEveryoneInRound);
+            server.serverLog(Thread.currentThread(), player.getName() +" played card Nr: " + card.getCardNumber());
+        } else {
+            server.sendMessageToOneClient(player, messageForOwnClient);
+            server.sendMessageToOneClient(player, "Your " + player.getDiscardPileRepresentation());
+            server.sendMessageToAllActivePlayersExceptOne(player, messageForEveryoneInRound);
+            server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + "'s " + player.getDiscardPileRepresentation());
+            server.serverLog(Thread.currentThread(), player.getName() + " played card Nr: " + card.getCardNumber());
+        }
 
     }
 
@@ -292,8 +299,6 @@ public class Game {
 
             if(selected.getHand().getCard1().getCardNumber() == number){
                 this.knockOutOfRound(selected);
-                server.sendMessageToOneClient(selected,"You are kicked out of the round.");
-                server.sendMessageToAllActivePlayersExceptOne(selected, selected.getName() + " was kicked out of the round.");
                 return;
             }
         }
@@ -302,8 +307,6 @@ public class Game {
 
             if(selected.getHand().getCard2().getCardNumber() == number){
                 this.knockOutOfRound(selected);
-                server.sendMessageToOneClient(selected,"You are kicked out of the round.");
-                server.sendMessageToAllActivePlayersExceptOne(selected, selected.getName() + " was kicked out of the round.");
             }
         }
 
@@ -387,14 +390,11 @@ public class Game {
 
             if(playerScore > selectedScore){
 
-                server.sendMessageToOneClient(selected, "You are kicked out of the round.");
-                server.sendMessageToAllActivePlayersExceptOne(selected, selected.getName() +" was kicked out of the round.");
                 knockOutOfRound(selected);
             }
 
             if(selectedScore > playerScore){
-                server.sendMessageToOneClient(player, "You are kicked out of the round.");
-                server.sendMessageToAllActivePlayersExceptOne(player, player.getName() +" was kicked out of the round.");
+
                 knockOutOfRound(player);
             }
 
@@ -420,9 +420,7 @@ public class Game {
                 String messageForEveryoneInRound = cardEffect[1];
 
                 server.sendMessageToOneClient(selected, messageForOwnClient);
-                server.sendMessageToOneClient(selected, "Your " + selected.getDiscardPileRepresentation());
                 server.sendMessageToAllActivePlayersExceptOne(selected, messageForEveryoneInRound);
-                server.sendMessageToAllActivePlayersExceptOne(selected, selected.getName() + "'s " + selected.getDiscardPileRepresentation());
             } else{
                 server.sendMessageToOneClient(selected, "You discarded " + discardedCard.toString() + ".");
                 server.sendMessageToOneClient(selected, "Your " + selected.getDiscardPileRepresentation());
@@ -468,13 +466,23 @@ public class Game {
     public void knockOutOfRound(ServerThread player) {
         player.setIsInRound(false);
         this.playerInRound.put(player, false);
-        Card hand = player.getHand().discardHand();
-        if(hand != null){
-            player.addToDiscardPile(hand);
-            player.getHand().clearHand();
-        }
+        Card card;
+
+        do {
+            card = player.getHand().discardHand();
+            if (card != null) {
+                player.addToDiscardPile(card);
+                player.getHand().removeFromHand(card);
+            }
+        }while (card != null);
 
         server.serverLog(Thread.currentThread(), player.getName() +" was kicked out of the round.");
+        server.sendMessageToOneClient(player,"You are kicked out of the round.");
+        server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + " was kicked out of the round.");
+
+        server.sendMessageToOneClient(player, "Your " + player.getDiscardPileRepresentation());
+        server.sendMessageToAllActivePlayersExceptOne(player, player.getName() + "'s " + player.getDiscardPileRepresentation());
+
 
     }
 
