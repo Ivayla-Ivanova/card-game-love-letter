@@ -31,3 +31,6 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+# Ignore target folder
+target/
