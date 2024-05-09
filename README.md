@@ -1,6 +1,5 @@
 ## Card game 'Love Letter'
 This project aims to create a simulator for the card game Love Letter. "Love Letter" is a popular card game designed for 2 to 4 players. It's a quick and easy-to-learn game that typically takes around 15 minutes to play. The game is set in the context of courtly intrigue and romance, where players aim to deliver their love letter to the Princess while navigating the complexities of the royal court. The objective of the game is to be the last player standing or to have the highest-ranked card in hand when the draw pile runs out.
-git
 ### Components:
 The game consists of a deck of 16 cards, each featuring a different character from the royal court. Some of the characters include the Princess, the King, the Baron, the Priest, and the Guard.
 
