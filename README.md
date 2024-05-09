@@ -21,22 +21,32 @@ Before installing the application, ensure that you have the following prerequisi
 
 To install and run the application, follow these steps:
 
-1. Download the JAR File - Go to the Releases section of this GitHub repository. Download the latest release package.
+1. Download the JAR File 
+- Go to the Releases section of this GitHub repository. 
+- Download the latest release package.
 
-2. Run the Server Instance - Open a terminal or command prompt.  Navigate to the directory where you downloaded the JAR file. Run the following command to start the server instance:
-
-        java -jar vorprojekt-ivayla-ivanova-1.0-SNAPSHOT.jar
-
-Wait for the server to start. You should see a message indicating that the server is running.
-
-3. Run the Client Instances - Open another terminal or command prompt. Navigate to the directory where you downloaded the JAR file.  Run the following command to start the first client instance:
-
+2. Run the Server Instance 
+- Open a terminal or command prompt.  
+- Navigate to the directory where you downloaded the JAR file. 
+- Run the following command to start the server instance:
 
         java -jar vorprojekt-ivayla-ivanova-1.0-SNAPSHOT.jar
 
-Repeat this step as many times as you wish to start certain amount of client instances in total.  Each client instance will connect to the server automatically.
+- Wait for the server to start. You should see a message indicating that the server is running.
 
-4. Play with Other Clients - Once you have at least two client instances running, you can play with each other. Follow the on-screen instructions to interact with the application and play the game.
+3. Run the Client Instances 
+- Open another terminal or command prompt. 
+- Navigate to the directory where you downloaded the JAR file.  
+- Run the following command to start the first client instance:
+
+
+        java -jar vorprojekt-ivayla-ivanova-1.0-SNAPSHOT.jar
+
+- Repeat this step as many times as you wish to start certain amount of client instances in total.  Each client instance will connect to the server automatically.
+
+4. Play with Other Clients 
+- Once you have at least two client instances running, you can play with each other. 
+- Follow the on-screen instructions to interact with the application and play the game.
 
 ### Additional Notes
 Make sure to keep the server instance running while you're using the application. Clients need to connect to the server to communicate with each other.
